@@ -1,6 +1,7 @@
 import numpy as np
 from numpy import pi , cos , sin
 import matplotlib.pyplot as plt
+import random
 
 
 
@@ -123,15 +124,18 @@ class Robot():
         # Affichage du robot
         plt.figure()
         plt.title("Modélisation du robot 3RRR")
-
+        
         # Tracer bras 1
-        plt.plot([P10[0], P11[0], P12[0]], [P10[1], P11[1], P12[1]], label="Bras 1")
+        color1 = (random.random(), random.random(), random.random())
+        plt.plot([P10[0], P11[0], P12[0]], [P10[1], P11[1], P12[1]], color = color1 ,label="Bras 1")
 
         # Tracer bras 2
-        plt.plot([P20[0], P21[0], P22[0]], [P20[1], P21[1], P22[1]], label="Bras 2")
+        color2 = (random.random(), random.random(), random.random())
+        plt.plot([P20[0], P21[0], P22[0]], [P20[1], P21[1], P22[1]], color = color2, label="Bras 2")
 
         # Tracer bras 3
-        plt.plot([P30[0], P31[0], P32[0]], [P30[1], P31[1], P32[1]], label="Bras 3")
+        color3 = (random.random(), random.random(), random.random())
+        plt.plot([P30[0], P31[0], P32[0]], [P30[1], P31[1], P32[1]], color = color3, label="Bras 3")
 
         # Tracer effecteur (triangle)
         plt.plot([P12[0], P22[0], P32[0], P12[0]],
@@ -147,7 +151,7 @@ class Robot():
         plt.grid(True)
         plt.title("Visualisation des bras + effecteur")
 
-        plt.show()
+       
 
     def MGI_analytique(self,eff):
         # Variables globales
@@ -254,7 +258,7 @@ class Robot():
 def main():
 
     
-
+    
     L1=0.10;  # long segment 1
     L2=0.10;  # long segment 2
     Rb=0.1322594;  # Rayon base
@@ -283,7 +287,7 @@ def main():
     q=robot.MGI_analytique(pos_eff)
     print(len(q))
     robot.traceRobot(q)
-
+    plt.show()
 
 if __name__=="__main__":
     main()
