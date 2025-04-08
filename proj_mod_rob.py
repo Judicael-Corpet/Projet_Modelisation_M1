@@ -25,31 +25,27 @@ class Robot():
     def get_Re(self):
         return self.LRe
 
-    def traceRobot(self,q) :
-        alpha1=q[0] 
-        beta1=q[1] 
-        alpha2=q[2] 
-        beta2=q[3] 
-        alpha3=q[4] 
-        beta3=q[5] 
+    def traceRobot(self, q):
+        alpha1 = q[0]
+        beta1 = q[1]
+        alpha2 = q[2]
+        beta2 = q[3]
+        alpha3 = q[4]
+        beta3 = q[5]
 
         # Matrices de rotation 2*2
-        Rot1=np.array([[cos(2*pi/3), -sin(2*pi/3)],
-                    [sin(2*pi/3), cos(2*pi/3)]])
-        
+        Rot1 = np.array([[cos(2 * pi / 3), -sin(2 * pi / 3)],
+                        [sin(2 * pi / 3), cos(2 * pi / 3)]])
+        Rot2 = np.array([[cos(4 * pi / 3), -sin(4 * pi / 3)],
+                        [sin(4 * pi / 3), cos(4 * pi / 3)]])
 
-        Rot2=np.array([[cos(4*pi/3), -sin(4*pi/3)],
-                    [sin(4*pi/3), cos(4*pi/3)]])
-
-        # Vecteurs 
-        P10=np.array([[0],
-                    [-self.Rb]])
-        
+        # Vecteurs
+        P10 = np.array([0, -self.Rb])
 
         T1 = np.array([
-            [1, 0,   0],
+            [1, 0, 0],
             [0, 1, -self.Rb],
-            [0, 0,   1]
+            [0, 0, 1]
         ])
 
         # --- P11 ---
@@ -76,7 +72,7 @@ class Robot():
 
         # --- Matrice homogène pour P21 et P22 ---
         T2 = np.block([
-            [Rot1, P20.reshape(2,1)],
+            [Rot1, P20.reshape(2, 1)],
             [np.zeros((1, 2)), np.array([[1]])]
         ])
 
@@ -104,7 +100,7 @@ class Robot():
 
         # --- Matrice homogène pour P31 et P32 ---
         T3 = np.block([
-            [Rot2, P30.reshape(2,1)],
+            [Rot2, P30.reshape(2, 1)],
             [np.zeros((1, 2)), np.array([[1]])]
         ])
 
@@ -124,12 +120,9 @@ class Robot():
         ])
         P32 = T3 @ P32_vec
 
-
-
-
+        # Affichage du robot
         plt.figure()
-        plt.title(" Modélisation du robot 3RRR")
-
+        plt.title("Modélisation du robot 3RRR")
 
         # Tracer bras 1
         plt.plot([P10[0], P11[0], P12[0]], [P10[1], P11[1], P12[1]], label="Bras 1")
@@ -251,7 +244,6 @@ class Robot():
 
 
 
-
 def main():
     robot= Robot(5,5,10,10)
     
@@ -275,15 +267,14 @@ def main():
 
     
     from scipy.optimize import fsolve
-    # Résoudre le système d'équations non linéaires
+    # 1ère méthode: Résoudre le système d'équations non linéaires
     q = fsolve(lambda q: robot.solve_eq_NL(q, pos_eff), q0)
-
-
     robot.traceRobot(q)
 
-    # 2ième méthode : résolution analytique du MGI 2R plan :renvoie alphi_i et beta_i
-    q=robot.MGI_analytique(pos_eff)
-    robot.traceRobot(q)
+    # 2ième méthode : Résolution analytique du MGI 2R plan :renvoie alphi_i et beta_i
+    # q=robot.MGI_analytique(pos_eff)
+    # print(len(q))
+    # robot.traceRobot(q)
 
 
 if __name__=="__main__":
