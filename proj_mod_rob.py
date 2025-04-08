@@ -25,13 +25,13 @@ class Robot():
     def get_Re(self):
         return self.LRe
 
-    def traceRobot(self, alpha1, beta1, alpha2, beta2, alpha3, beta3) :
-        self.q[0] = alpha1
-        self.q[1] = beta1
-        self.q[2] = alpha2
-        self.q[3] = beta2
-        self.q[4] = alpha3
-        self.q[5] = beta3
+    def traceRobot(self,q) :
+        alpha1=q[0] 
+        beta1=q[1] 
+        alpha2=q[2] 
+        beta2=q[3] 
+        alpha3=q[4] 
+        beta3=q[5] 
 
         # Matrices de rotation 2*2
         Rot1=np.array([[cos(2*pi/3), -sin(2*pi/3)],
@@ -156,9 +156,9 @@ class Robot():
 
         plt.show()
 
-    def MGI_analytique(eff):
+    def MGI_analytique(self,eff):
         # Variables globales
-        global L1, L2, Rb, Re
+        
 
         # Matrice de rotation et translation de l'effecteur
         RotEff = np.array([[np.cos(eff[2]), -np.sin(eff[2])], [np.sin(eff[2]), np.cos(eff[2])]])
@@ -177,10 +177,10 @@ class Robot():
         for i in range(3):
             # Matrice de rotation et translation de R_i par rapport à R_0
             Rot = np.array([[np.cos(ang1[i]), -np.sin(ang1[i])], [np.sin(ang1[i]), np.cos(ang1[i])]])
-            TH = np.block([[Rot, np.array([Rb * np.cos(ang2[i]), Rb * np.sin(ang2[i])]).reshape(-1, 1)], [0, 0, 1]])
+            TH = np.block([[Rot, np.array([self.Rb * np.cos(ang2[i]), self.Rb * np.sin(ang2[i])]).reshape(-1, 1)], [0, 0, 1]])
 
             # Position des points E_i dans R_E
-            PEi_E = np.array([Re * np.cos(ang2[i]), Re * np.sin(ang2[i]), 1])
+            PEi_E = np.array([self.Re * np.cos(ang2[i]), self.Re * np.sin(ang2[i]), 1])
 
             # Position des trois points E_i de l'effecteur dans R_0
             PEi_0 = THEff @ PEi_E
@@ -192,22 +192,22 @@ class Robot():
             x = PEi_i[0]
             y = PEi_i[1]
 
-            aux = (x**2 + y**2 - L1**2 - L2**2) / (2 * L1 * L2)
+            aux = (x**2 + y**2 - self.L1**2 - self.L2**2) / (2 * self.L1 * self.L2)
             if abs(aux) < 1:
                 beta = np.arccos(aux)  # Solution coude en haut
             else:
                 beta = 0
                 print("Problème d'atteignabilité")
 
-            alpha = np.arctan2(y, x) - np.arctan2(L2 * np.sin(beta), L1 + L2 * np.cos(beta))
+            alpha = np.arctan2(y, x) - np.arctan2(self.L2 * np.sin(beta), self.L1 + self.L2 * np.cos(beta))
 
             q.append([alpha, beta])
 
         return np.array(q)
 
-    def solve_eq_NL(q, eff):
+    def solve_eq_NL(self,q, eff):
         # Variables globales
-        global L1, L2, Rb, Re
+        
 
         # Extraction des valeurs de alpha et beta pour chaque bras
         alpha = [q[0], q[2], q[4]]
@@ -228,18 +228,18 @@ class Robot():
 
         for i in range(3):
             # Position des points E_i dans R_E
-            PEi_E = np.array([Re * np.cos(ang2[i]), Re * np.sin(ang2[i]), 1])
+            PEi_E = np.array([self.Re * np.cos(ang2[i]),self.Re * np.sin(ang2[i]), 1])
 
             # Position des trois points E_i de l'effecteur dans R_0
             PEi_0 = THEff @ PEi_E
 
             # Matrice de rotation et translation de R_i par rapport à R_0
             Rot = np.array([[np.cos(ang1[i]), -np.sin(ang1[i])], [np.sin(ang1[i]), np.cos(ang1[i])]])
-            THRi_0 = np.block([[Rot, np.array([Rb * np.cos(ang2[i]), Rb * np.sin(ang2[i])]).reshape(-1, 1)], [0, 0, 1]])
+            THRi_0 = np.block([[Rot, np.array([self.Rb * np.cos(ang2[i]), self.Rb * np.sin(ang2[i])]).reshape(-1, 1)], [0, 0, 1]])
 
             # Points B_i, extrémités des bras en fonction de alpha_i et beta_i dans R_0
-            PBi = THRi_0 @ np.array([L1 * np.cos(alpha[i]) + L2 * np.cos(alpha[i] + beta[i]),
-                                    L1 * np.sin(alpha[i]) + L2 * np.sin(alpha[i] + beta[i]),
+            PBi = THRi_0 @ np.array([self.L1 * np.cos(alpha[i]) + self.L2 * np.cos(alpha[i] + beta[i]),
+                                    self.L1 * np.sin(alpha[i]) + self.L2 * np.sin(alpha[i] + beta[i]),
                                     1])
 
             # Les contraintes expriment que B_i doit être confondu avec E_i
