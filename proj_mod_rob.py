@@ -254,7 +254,7 @@ class Robot():
 
 def main():
     robot= Robot(5,5,10,10)
-    robot.traceRobot(pi/2,pi/2,pi/2,pi/2,pi/2,pi/2)
+    
 
     L1=0.10;  # long segment 1
     L2=0.10;  # long segment 2
