@@ -245,7 +245,7 @@ class Robot():
 
 
 def main():
-    robot= Robot(5,5,10,10)
+
     
 
     L1=0.10;  # long segment 1
@@ -253,6 +253,7 @@ def main():
     Rb=0.1322594;  # Rayon base
     Re=0.07; # Rayon effecteur
 
+    robot= Robot(L1,L2,Rb,Re)
     pos_eff=[0.0, 0.0, 0]; # pose effecteur
 
     # 1ière méthode : résolution de systèmes d'éq non-linéaires 
