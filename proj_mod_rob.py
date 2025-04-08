@@ -194,14 +194,17 @@ class Robot():
 
             alpha = np.arctan2(y, x) - np.arctan2(self.L2 * np.sin(beta), self.L1 + self.L2 * np.cos(beta))
 
-            q.append([alpha, beta])
+            q.append(alpha)
+            q.append(beta)
+      
 
         return np.array(q)
 
     def solve_eq_NL(self,q, eff):
+        if self.check_extesnsion(q)== True:
+            print(" Il y a une singularité: extension")
         # Variables globales
-        
-
+        print(q[1],q[3],q[5])
         # Extraction des valeurs de alpha et beta pour chaque bras
         alpha = [q[0], q[2], q[4]]
         beta = [q[1], q[3], q[5]]
@@ -242,7 +245,11 @@ class Robot():
 
         return np.array(F)
 
-
+    def check_extesnsion(self,q):
+        result=False
+        if q[1]==0 or q[3]==0 or q[5]==0:
+            result=True
+        return result
 
 def main():
 
@@ -254,7 +261,7 @@ def main():
     Re=0.07; # Rayon effecteur
 
     robot= Robot(L1,L2,Rb,Re)
-    pos_eff=[0.0, 0.0, 0]; # pose effecteur
+    pos_eff=[0.05, 0.05, 0]; # pose effecteur
 
     # 1ière méthode : résolution de systèmes d'éq non-linéaires 
     # solutions initiales des angles alpha beta des bras 1,2,3
@@ -273,9 +280,9 @@ def main():
     robot.traceRobot(q)
 
     # 2ième méthode : Résolution analytique du MGI 2R plan :renvoie alphi_i et beta_i
-    # q=robot.MGI_analytique(pos_eff)
-    # print(len(q))
-    # robot.traceRobot(q)
+    q=robot.MGI_analytique(pos_eff)
+    print(len(q))
+    robot.traceRobot(q)
 
 
 if __name__=="__main__":
