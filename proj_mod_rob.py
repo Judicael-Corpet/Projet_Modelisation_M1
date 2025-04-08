@@ -142,6 +142,14 @@ class Robot():
                 [P12[1], P22[1], P32[1], P12[1]],
                 linewidth=2, label="Effecteur")
 
+        # Tracer du centre de gravité de l'effecteur (qui sera la pointe qui écrit), et qui permettra plus facilement de vérifier si les coordonnées envoyées sont correctes
+        # Calcul du barycentre du triangle de l'effecteur
+        Gx = (P12[0] + P22[0] + P32[0]) / 3
+        Gy = (P12[1] + P22[1] + P32[1]) / 3
+
+        # Tracer le barycentre
+        plt.plot(Gx, Gy, 'ro', label='Pointe effecteur')  # 'ro' = point rouge
+
         # Mise à l’échelle
         plt.axis("equal")
         plt.axis("square")
