@@ -1,49 +1,65 @@
-function q=MGI_analytique(eff)
+import numpy as np
 
-global L1 L2 Rb Re
+# Variables globales (à définir avant appel)
+L1 = 0.0  # longueur du premier segment
+L2 = 0.0  # longueur du deuxième segment
+Rb = 0.0  # rayon de base
+Re = 0.0  # rayon de l'effecteur
 
-%Mat. rotation et TH de l'effecteur
-RotEff=[cos(eff(3)) -sin(eff(3)); sin(eff(3)) cos(eff(3))];
-Transl=[eff(1); eff(2)];
-THEff=[RotEff Transl; 0 0 1];
+def MGI_analytique(eff):
+    global L1, L2, Rb, Re
 
-%angle R_i par rapport R_0
-ang1=[0 2*pi/3 4*pi/3];
+    # Matrice de rotation et transformation homogène de l'effecteur
+    theta = eff[2]
+    RotEff = np.array([
+        [np.cos(theta), -np.sin(theta)],
+        [np.sin(theta),  np.cos(theta)]
+    ])
+    Transl = np.array([[eff[0]], [eff[1]]])
+    THEff = np.block([
+        [RotEff, Transl],
+        [np.zeros((1, 2)), np.array([[1]])]
+    ])
 
-%angle des positions O_i et E_i 
-ang2=[-pi/2 pi/6 5*pi/6];
+    # Angles R_i par rapport à R_0
+    ang1 = [0, 2*np.pi/3, 4*np.pi/3]
 
-q=[];
+    # Angles des positions O_i et E_i
+    ang2 = [-np.pi/2, np.pi/6, 5*np.pi/6]
 
-for i=1:3
-    %Mat Rot et TH de R_i par rapport à R_0
-    Rot=[cos(ang1(i)) -sin(ang1(i)); sin(ang1(i)) cos(ang1(i))];
-    TH=[Rot [Rb*cos(ang2(i)); Rb*sin(ang2(i))]; [0 0 1]];
-    
-    %Position des points E_i dans R_E
-    PEi_E=[Re*cos(ang2(i)); Re*sin(ang2(i)); 1];
-    
-    %Position des trois points E_i de l'effecteur dans R_0
-    PEi_0=THEff*PEi_E;
+    q = []
 
-    % Position des points effecteur E_i dans les repères dans robots R_i
-    PEi_i=inv(TH)*PEi_0;
+    for i in range(3):
+        # Matrice de rotation et transformation homogène de R_i par rapport à R_0
+        Rot = np.array([
+            [np.cos(ang1[i]), -np.sin(ang1[i])],
+            [np.sin(ang1[i]),  np.cos(ang1[i])]
+        ])
+        TH = np.block([
+            [Rot, np.array([[Rb*np.cos(ang2[i])], [Rb*np.sin(ang2[i])]])],
+            [np.zeros((1, 2)), np.array([[1]])]
+        ])
 
-    %MGI 2R plan
-    x=PEi_i(1);
-    y=PEi_i(2);
+        # Position des points E_i dans R_E
+        PEi_E = np.array([[Re*np.cos(ang2[i])], [Re*np.sin(ang2[i])], [1]])
 
-    aux=(x^2+y^2-L1^2-L2^2)/(2*L1*L2);
-    if abs(aux) < 1 
-        beta=acos(aux); % changer le signe pour la solution coude en haut
-    else
-        beta=0; disp('problème d atteignabilité');
-    end
-    alpha=atan2(y,x)-atan2(L2*sin(beta),L1+L2*cos(beta));
-    q=[q;[alpha; beta]];
-    
-end
+        # Position des points E_i de l'effecteur dans R_0
+        PEi_0 = THEff @ PEi_E
 
+        # Position des points effecteur E_i dans les repères des robots R_i
+        PEi_i = np.linalg.inv(TH) @ PEi_0
 
+        x, y = PEi_i[0, 0], PEi_i[1, 0]
 
-end
+        # MGI du bras 2R plan
+        aux = (x**2 + y**2 - L1**2 - L2**2) / (2 * L1 * L2)
+        if abs(aux) < 1:
+            beta = np.arccos(aux)  # solution coude en bas
+        else:
+            beta = 0
+            print("Problème d'atteignabilité")
+
+        alpha = np.arctan2(y, x) - np.arctan2(L2*np.sin(beta), L1 + L2*np.cos(beta))
+        q.append([alpha, beta])
+
+    return np.array(q)
