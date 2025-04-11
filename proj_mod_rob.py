@@ -2,17 +2,53 @@ import numpy as np
 from numpy import pi , cos , sin
 import matplotlib.pyplot as plt
 import random
+import pygame
+import copy
 
+"""Created on Thue 10 April
+@auhors= Dan CALAMIA & Judicaël CORPET
 
+while 3RRR Project
 
+"""
 
 class Robot():
-    def __init__(self, L1, L2, Rb, Re):
+
+    def __init__(self, L1, L2, Rb, Re ,dimensionPlateau, name="3RRR"):
+
+        # Variables par défaut
         self.L1 = L1
         self.L2=L2
         self.Rb=Rb
         self.Re=Re
+        self.dimensionPlateau=dimensionPlateau
         self.q = []
+
+        self.q0= np.array([  # solutions initiales des angles alpha beta des bras 1,2,3
+                [0], 
+                [pi/2], 
+                [0],
+                [pi/2 ],
+                [0],
+                [pi/2]])
+
+
+        # Variables de position du robot
+        self.P10, self.P11, self.P12,self.P20,self.P21, self.P22, self.P30, self.P31,self.P32=[],[],[],[],[],[],[],[],[] # pas obligé de les déclaré dans init en réalité
+
+        # Variables Pygame
+        self.name=name
+        pygame.init()
+        self.width=800
+        self.height=800
+        self.window = pygame.display.set_mode((self.width,self.height))
+        self.window.fill((232,220,202))
+        pygame.display.set_caption(f"Simulation of {self.name} robot")
+        self.clock=pygame.time.Clock()
+        self.FPS=60
+
+        # Mise à l'échelle pour pygame
+        self.scale= self.width/self.dimensionPlateau
     
     def get_L1(self):
         return self.L1
@@ -26,7 +62,7 @@ class Robot():
     def get_Re(self):
         return self.LRe
 
-    def traceRobot(self, q):
+    def calculPos(self, q):
         alpha1 = q[0]
         beta1 = q[1]
         alpha2 = q[2]
@@ -41,7 +77,7 @@ class Robot():
                         [sin(4 * pi / 3), cos(4 * pi / 3)]])
 
         # Vecteurs
-        P10 = np.array([0, -self.Rb])
+        self.P10 = np.array([0, -self.Rb])
 
         T1 = np.array([
             [1, 0, 0],
@@ -55,7 +91,7 @@ class Robot():
             self.L1 * np.sin(alpha1),
             1
         ])
-        P11 = T1 @ P11_vec
+        self.P11 = T1 @ P11_vec
 
         # --- P12 ---
         P12_vec = np.array([
@@ -63,17 +99,17 @@ class Robot():
             self.L1 * np.sin(alpha1) + self.L2 * np.sin(alpha1 + beta1),
             1
         ])
-        P12 = T1 @ P12_vec
+        self.P12 = T1 @ P12_vec
 
         # --- P20 ---
-        P20 = np.array([
+        self.P20 = np.array([
             self.Rb * np.sqrt(3) / 2,
             self.Rb / 2
         ])
 
         # --- Matrice homogène pour P21 et P22 ---
         T2 = np.block([
-            [Rot1, P20.reshape(2, 1)],
+            [Rot1, self.P20.reshape(2, 1)],
             [np.zeros((1, 2)), np.array([[1]])]
         ])
 
@@ -83,7 +119,7 @@ class Robot():
             self.L1 * np.sin(alpha2),
             1
         ])
-        P21 = T2 @ P21_vec
+        self.P21 = T2 @ P21_vec
 
         # --- P22 ---
         P22_vec = np.array([
@@ -91,17 +127,17 @@ class Robot():
             self.L1 * np.sin(alpha2) + self.L2 * np.sin(alpha2 + beta2),
             1
         ])
-        P22 = T2 @ P22_vec
+        self.P22 = T2 @ P22_vec
 
         # --- P30 ---
-        P30 = np.array([
+        self.P30 = np.array([
             -self.Rb * np.sqrt(3) / 2,
             self.Rb / 2
         ])
 
         # --- Matrice homogène pour P31 et P32 ---
         T3 = np.block([
-            [Rot2, P30.reshape(2, 1)],
+            [Rot2,self.P30.reshape(2, 1)],
             [np.zeros((1, 2)), np.array([[1]])]
         ])
 
@@ -111,7 +147,7 @@ class Robot():
             self.L1 * np.sin(alpha3),
             1
         ])
-        P31 = T3 @ P31_vec
+        self.P31 = T3 @ P31_vec
 
         # --- P32 ---
         P32_vec = np.array([
@@ -119,33 +155,34 @@ class Robot():
             self.L1 * np.sin(alpha3) + self.L2 * np.sin(alpha3 + beta3),
             1
         ])
-        P32 = T3 @ P32_vec
+        self.P32 = T3 @ P32_vec
 
+    def traceRobot(self):
         # Affichage du robot
         plt.figure()
         plt.title("Modélisation du robot 3RRR")
         
         # Tracer bras 1
         color1 = (random.random(), random.random(), random.random())
-        plt.plot([P10[0], P11[0], P12[0]], [P10[1], P11[1], P12[1]], color = color1 ,label="Bras 1")
+        plt.plot([self.P10[0], self.P11[0], self.P12[0]], [self.P10[1], self.P11[1], self.P12[1]], color = color1 ,label="Bras 1")
 
         # Tracer bras 2
         color2 = (random.random(), random.random(), random.random())
-        plt.plot([P20[0], P21[0], P22[0]], [P20[1], P21[1], P22[1]], color = color2, label="Bras 2")
+        plt.plot([self.P20[0], self.P21[0], self.P22[0]], [self.P20[1], self.P21[1], self.P22[1]], color = color2, label="Bras 2")
 
         # Tracer bras 3
         color3 = (random.random(), random.random(), random.random())
-        plt.plot([P30[0], P31[0], P32[0]], [P30[1], P31[1], P32[1]], color = color3, label="Bras 3")
+        plt.plot([self.P30[0], self.P31[0],self. P32[0]], [self.P30[1], self.P31[1], self.P32[1]], color = color3, label="Bras 3")
 
         # Tracer effecteur (triangle)
-        plt.plot([P12[0], P22[0], P32[0], P12[0]],
-                [P12[1], P22[1], P32[1], P12[1]],
+        plt.plot([self.P12[0], self.P22[0], self.P32[0], self.P12[0]],
+                [self.P12[1], self.P22[1], self.P32[1], self.P12[1]],
                 linewidth=2, label="Effecteur")
 
         # Tracer du centre de gravité de l'effecteur (qui sera la pointe qui écrit), et qui permettra plus facilement de vérifier si les coordonnées envoyées sont correctes
         # Calcul du barycentre du triangle de l'effecteur
-        Gx = (P12[0] + P22[0] + P32[0]) / 3
-        Gy = (P12[1] + P22[1] + P32[1]) / 3
+        Gx = (self.P12[0] + self.P22[0] + self.P32[0]) / 3
+        Gy = (self.P12[1] + self.P22[1] + self.P32[1]) / 3
 
         # Tracer le barycentre
         plt.plot(Gx, Gy, 'ro', label='Pointe effecteur')  # 'ro' = point rouge
@@ -157,10 +194,10 @@ class Robot():
         # Afficher les légendes (optionnel)
         plt.legend()
         plt.grid(True)
-        plt.title("Visualisation des bras + effecteur")
+        plt.title("Visualisation des bras + effecteur") 
 
-       
-
+        plt.show()
+        
     def MGI_analytique(self,eff):
         # Variables globales
         
@@ -263,39 +300,77 @@ class Robot():
             result=True
         return result
 
-def main():
+    def randcolor(self):
+        r= random.randint(0,255)
+        g= random.randint(0,255)
+        b= random.randint(0,255)
 
-    
-    
-    L1=0.10;  # long segment 1
-    L2=0.10;  # long segment 2
-    Rb=0.1322594;  # Rayon base
-    Re=0.07; # Rayon effecteur
+        return r,g,b
 
-    robot= Robot(L1,L2,Rb,Re)
-    pos_eff=[0.05, 0.05, 0]; # pose effecteur
+    def convertToPygame(self,c):
+        coo=c.copy()
+        return (coo[0]*self.scale+self.width/2, self.height/2-coo[1]*self.scale)
 
-    # 1ière méthode : résolution de systèmes d'éq non-linéaires 
-    # solutions initiales des angles alpha beta des bras 1,2,3
-    q0= np.array([
-                [0], 
-                [pi/2], 
-                [0],
-                [pi/2 ],
-                [0],
-                [pi/2]])
+    def drawPygame(self):
+        # color bras
+        color_arm=(0,255,0)
+        # color effecteur
+        color_eff=(0,0,0)
 
-    
-    from scipy.optimize import fsolve
-    # 1ère méthode: Résoudre le système d'équations non linéaires
-    q = fsolve(lambda q: robot.solve_eq_NL(q, pos_eff), q0)
-    robot.traceRobot(q)
+        self.arm_width=3
 
-    # 2ième méthode : Résolution analytique du MGI 2R plan :renvoie alphi_i et beta_i
-    q=robot.MGI_analytique(pos_eff)
-    print(len(q))
-    robot.traceRobot(q)
-    plt.show()
+        pygame.draw.line(self.window, color_arm, self.convertToPygame(self.P10), self.convertToPygame(self.P11), self.arm_width)
+        pygame.draw.line(self.window, color_arm, self.convertToPygame(self.P11), self.convertToPygame(self.P12), self.arm_width)
 
-if __name__=="__main__":
-    main()
+        pygame.draw.line(self.window, color_arm, self.convertToPygame(self.P20), self.convertToPygame(self.P21), self.arm_width)
+        pygame.draw.line(self.window, color_arm, self.convertToPygame(self.P21), self.convertToPygame(self.P22), self.arm_width)
+
+        pygame.draw.line(self.window, color_arm, self.convertToPygame(self.P30), self.convertToPygame(self.P31), self.arm_width)
+        pygame.draw.line(self.window, color_arm, self.convertToPygame(self.P31), self.convertToPygame(self.P32), self.arm_width)
+
+        pygame.draw.line(self.window, color_eff, self.convertToPygame(self.P12), self.convertToPygame(self.P22), self.arm_width)
+        pygame.draw.line(self.window, color_eff, self.convertToPygame(self.P22), self.convertToPygame(self.P32), self.arm_width)
+        pygame.draw.line(self.window, color_eff, self.convertToPygame(self.P32), self.convertToPygame(self.P12), self.arm_width)
+
+
+
+        plt.plot([self.P12[0], self.P22[0], self.P32[0], self.P12[0]],
+                [self.P12[1], self.P22[1], self.P32[1], self.P12[1]],
+                linewidth=2, label="Effecteur")
+
+
+        pygame.display.flip() # actualise la frame
+
+    def runPygame(self,q):
+
+            running=True
+            step=0.1
+            nStep=1000
+
+            Q1=np.linspace(self.q0[0],q[0],nStep)
+            Q2=np.linspace(self.q0[1],q[1],nStep)
+            Q3=np.linspace(self.q0[2],q[2],nStep)
+            Q4=np.linspace(self.q0[3],q[3],nStep)
+            Q5=np.linspace(self.q0[4],q[0],nStep)
+            Q6=np.linspace(self.q0[5],q[5],nStep)
+
+            while running:
+                pygame.event.pump() # process event queue
+                keys= pygame.key.get_pressed()
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:  # Fermer la fenêtre
+                        running = False
+                        
+                    if keys[ord('z')] or keys[pygame.K_UP]: 
+                        pass
+                
+                    for i in range(0,nStep-1):
+                        # print(Q1[i])
+                        self.calculPos(q)
+                        self.window.fill((232,220,202))
+                        self.drawPygame()
+                        self.clock.tick(0.1)             
+
+                
+                self.clock.tick(self.FPS)  
+                
