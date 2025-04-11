@@ -246,7 +246,7 @@ class Robot():
         if self.check_extesnsion(q)== True:
             print(" Il y a une singularité: extension")
         # Variables globales
-        print(q[1],q[3],q[5])
+        # print(q[1],q[3],q[5])
         # Extraction des valeurs de alpha et beta pour chaque bras
         alpha = [q[0], q[2], q[4]]
         beta = [q[1], q[3], q[5]]
@@ -340,45 +340,53 @@ class Robot():
 
         pygame.display.flip() # actualise la frame
 
-    def runPygame(self,q):
+    # def runPygame(self,q):
 
-            running=True
-            nStep=100
-            print(self.q0)
-            qtemp=self.q0.copy()
+    #         running=True
+    #         nStep=100
+    #         # print(self.q0)
+    #         qtemp=self.q0.copy()
+    #         qtemp=qtemp.flatten()
+    #         # print(qtemp)
+    #         step1=(q[0]-qtemp[0])/nStep
+    #         step2=(q[1]-qtemp[1])/nStep
+    #         step3=(q[2]-qtemp[2])/nStep
+    #         step4=(q[3]-qtemp[3])/nStep
+    #         step5=(q[4]-qtemp[4])/nStep
+    #         step6=(q[5]-qtemp[5])/nStep
+           
+           
+            
+    #         for i in range(0,nStep):
+    #                     qtemp[0]+=step1
+    #                     qtemp[1]+=step2
+    #                     qtemp[2]+=step3
+    #                     qtemp[3]+=step4
+    #                     qtemp[4]+=step5
+    #                     qtemp[5]+=step6
+    #                     print(qtemp[1],qtemp[2],qtemp[3])
 
-            step1=qtemp[0]/nStep
-            step2=qtemp[1]/nStep
-            step3=qtemp[2]/nStep
-            step4=qtemp[3]/nStep
-            step5=qtemp[4]/nStep
-            step6=qtemp[5]/nStep
+    #                     self.calculPos(qtemp) # cela va mettre  a jour les variables Pos donc PARFAITTTT
+    #                     self.window.fill((232,220,202))
+    #                     self.drawPygame()
+    #                     pygame.time.wait(100)
 
-            while running:
-                pygame.event.pump() # process event queue
-                keys= pygame.key.get_pressed()
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:  # Fermer la fenêtre
-                        running = False
+
+    #         while running:
+    #             pygame.event.pump() # process event queue
+    #             keys= pygame.key.get_pressed()
+    #             for event in pygame.event.get():
+    #                 if event.type == pygame.QUIT:  # Fermer la fenêtre
+    #                     running = False
                         
-                    if keys[ord('z')] or keys[pygame.K_UP]: 
-                        pass
+    #                 if keys[ord('z')] or keys[pygame.K_UP]: 
+    #                     pass
                     
-                    for i in range(0,nStep):
-                        qtemp[0]+=step1
-                        qtemp[1]+=step2
-                        qtemp[2]+=step3
-                        qtemp[3]+=step4
-                        qtemp[4]+=step5
-                        qtemp[5]+=step6
-
-                        self.calculPos(qtemp) # cela va mettre  a jour les variables Pos donc PARFAITTTT
-                        self.window.fill((232,220,202))
-                        self.drawPygame()
-                        pygame.time.wait(100)
+                    
+                    
                       
 
                 
-                self.clock.tick(self.FPS)  
+    #             self.clock.tick(self.FPS)  
                 
 
