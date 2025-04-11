@@ -14,7 +14,7 @@ while 3RRR Project
 
 class Robot():
 
-    def __init__(self, L1, L2, Rb, Re ,dimensionPlateau, name="3RRR"):
+    def __init__(self, L1, L2, Rb, Re ,dimensionPlateau ,pos_eff, q0 , name="3RRR"):
 
         # Variables par défaut
         self.L1 = L1
@@ -22,15 +22,8 @@ class Robot():
         self.Rb=Rb
         self.Re=Re
         self.dimensionPlateau=dimensionPlateau
-        self.q = []
-
-        self.q0= np.array([  # solutions initiales des angles alpha beta des bras 1,2,3
-                [0], 
-                [pi/2], 
-                [0],
-                [pi/2 ],
-                [0],
-                [pi/2]])
+        self.pos_eff=pos_eff
+        self.q0= q0
 
 
         # Variables de position du robot
@@ -62,7 +55,7 @@ class Robot():
     def get_Re(self):
         return self.LRe
 
-    def calculPos(self, q):
+    def calculPos(self,q):
         alpha1 = q[0]
         beta1 = q[1]
         alpha2 = q[2]
@@ -157,10 +150,9 @@ class Robot():
         ])
         self.P32 = T3 @ P32_vec
 
-    def traceRobot(self):
+    def traceRobot(self, method= ""):
         # Affichage du robot
         plt.figure()
-        plt.title("Modélisation du robot 3RRR")
         
         # Tracer bras 1
         color1 = (random.random(), random.random(), random.random())
@@ -194,17 +186,17 @@ class Robot():
         # Afficher les légendes (optionnel)
         plt.legend()
         plt.grid(True)
-        plt.title("Visualisation des bras + effecteur") 
+        plt.title(f"Visualisation des bras + effecteur (méthode: {method})") 
 
         plt.show()
         
-    def MGI_analytique(self,eff):
+    def MGI_analytique(self):
         # Variables globales
         
 
         # Matrice de rotation et translation de l'effecteur
-        RotEff = np.array([[np.cos(eff[2]), -np.sin(eff[2])], [np.sin(eff[2]), np.cos(eff[2])]])
-        Transl = np.array([eff[0], eff[1]])
+        RotEff = np.array([[np.cos(self.pos_eff[2]), -np.sin(self.pos_eff[2])], [np.sin(self.pos_eff[2]), np.cos(self.pos_eff[2])]])
+        Transl = np.array([self.pos_eff[0], self.pos_eff[1]])
         THEff = np.block([[RotEff, Transl.reshape(-1, 1)], [0, 0, 1]])
 
         # Angles R_i par rapport à R_0
@@ -245,11 +237,12 @@ class Robot():
 
             q.append(alpha)
             q.append(beta)
-      
 
         return np.array(q)
+        
+        # return np.array(q)
 
-    def solve_eq_NL(self,q, eff):
+    def solve_eq_NL(self,q):
         if self.check_extesnsion(q)== True:
             print(" Il y a une singularité: extension")
         # Variables globales
@@ -265,8 +258,8 @@ class Robot():
         ang2 = [-np.pi / 2, np.pi / 6, 5 * np.pi / 6]
 
         # Matrice de rotation et translation de l'effecteur
-        RotEff = np.array([[np.cos(eff[2]), -np.sin(eff[2])], [np.sin(eff[2]), np.cos(eff[2])]])
-        Transl = np.array([eff[0], eff[1]])
+        RotEff = np.array([[np.cos(self.pos_eff[2]), -np.sin(self.pos_eff[2])], [np.sin(self.pos_eff[2]), np.cos(self.pos_eff[2])]])
+        Transl = np.array([self.pos_eff[0], self.pos_eff[1]])
         THEff = np.block([[RotEff, Transl.reshape(-1, 1)], [0, 0, 1]])
 
         F = []
@@ -294,6 +287,12 @@ class Robot():
 
         return np.array(F)
 
+    def no_linear(self):
+        # 1ère méthode: Résoudre le système d'équations non linéaires
+        from scipy.optimize import fsolve
+        q = fsolve(lambda q: self.solve_eq_NL(q), self.q0)
+        return q
+    
     def check_extesnsion(self,q):
         result=False
         if q[1]==0 or q[3]==0 or q[5]==0:
@@ -344,15 +343,16 @@ class Robot():
     def runPygame(self,q):
 
             running=True
-            step=0.1
-            nStep=1000
+            nStep=100
+            print(self.q0)
+            qtemp=self.q0.copy()
 
-            Q1=np.linspace(self.q0[0],q[0],nStep)
-            Q2=np.linspace(self.q0[1],q[1],nStep)
-            Q3=np.linspace(self.q0[2],q[2],nStep)
-            Q4=np.linspace(self.q0[3],q[3],nStep)
-            Q5=np.linspace(self.q0[4],q[0],nStep)
-            Q6=np.linspace(self.q0[5],q[5],nStep)
+            step1=qtemp[0]/nStep
+            step2=qtemp[1]/nStep
+            step3=qtemp[2]/nStep
+            step4=qtemp[3]/nStep
+            step5=qtemp[4]/nStep
+            step6=qtemp[5]/nStep
 
             while running:
                 pygame.event.pump() # process event queue
@@ -363,14 +363,22 @@ class Robot():
                         
                     if keys[ord('z')] or keys[pygame.K_UP]: 
                         pass
-                
-                    for i in range(0,nStep-1):
-                        # print(Q1[i])
-                        self.calculPos(q)
+                    
+                    for i in range(0,nStep):
+                        qtemp[0]+=step1
+                        qtemp[1]+=step2
+                        qtemp[2]+=step3
+                        qtemp[3]+=step4
+                        qtemp[4]+=step5
+                        qtemp[5]+=step6
+
+                        self.calculPos(qtemp) # cela va mettre  a jour les variables Pos donc PARFAITTTT
                         self.window.fill((232,220,202))
                         self.drawPygame()
-                        self.clock.tick(0.1)             
+                        pygame.time.wait(100)
+                      
 
                 
                 self.clock.tick(self.FPS)  
                 
+
