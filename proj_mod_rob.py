@@ -42,6 +42,7 @@ class Robot():
 
         # Mise à l'échelle pour pygame
         self.scale= self.width/self.dimensionPlateau
+        print(self.scale)
     
     def get_L1(self):
         return self.L1
@@ -308,7 +309,7 @@ class Robot():
 
     def convertToPygame(self,c):
         coo=c.copy()
-        return (coo[0]*self.scale+self.width/2, self.height/2-coo[1]*self.scale)
+        return (self.width//2+coo[0]*self.scale,self.height//2- coo[1]*self.scale)
 
     def drawPygame(self):
         # color bras
@@ -317,12 +318,12 @@ class Robot():
         color_eff=(0,0,0)
 
         self.arm_width=3
-
+        red=(255,0,0)
         pygame.draw.line(self.window, color_arm, self.convertToPygame(self.P10), self.convertToPygame(self.P11), self.arm_width)
         pygame.draw.line(self.window, color_arm, self.convertToPygame(self.P11), self.convertToPygame(self.P12), self.arm_width)
 
-        pygame.draw.line(self.window, color_arm, self.convertToPygame(self.P20), self.convertToPygame(self.P21), self.arm_width)
-        pygame.draw.line(self.window, color_arm, self.convertToPygame(self.P21), self.convertToPygame(self.P22), self.arm_width)
+        pygame.draw.line(self.window, red, self.convertToPygame(self.P20), self.convertToPygame(self.P21), self.arm_width)
+        pygame.draw.line(self.window, red, self.convertToPygame(self.P21), self.convertToPygame(self.P22), self.arm_width)
 
         pygame.draw.line(self.window, color_arm, self.convertToPygame(self.P30), self.convertToPygame(self.P31), self.arm_width)
         pygame.draw.line(self.window, color_arm, self.convertToPygame(self.P31), self.convertToPygame(self.P32), self.arm_width)
@@ -340,53 +341,111 @@ class Robot():
 
         pygame.display.flip() # actualise la frame
 
-    # def runPygame(self,q):
+    def runPygame(self,q):
 
-    #         running=True
-    #         nStep=100
-    #         # print(self.q0)
-    #         qtemp=self.q0.copy()
-    #         qtemp=qtemp.flatten()
-    #         # print(qtemp)
-    #         step1=(q[0]-qtemp[0])/nStep
-    #         step2=(q[1]-qtemp[1])/nStep
-    #         step3=(q[2]-qtemp[2])/nStep
-    #         step4=(q[3]-qtemp[3])/nStep
-    #         step5=(q[4]-qtemp[4])/nStep
-    #         step6=(q[5]-qtemp[5])/nStep
+            running=True
+            nStep=100
+            # print(self.q0)
+            qtemp=self.q0.copy()
+            qtemp=qtemp.flatten()
+            # print(qtemp)
+            step1=(q[0]-qtemp[0])/nStep
+            step2=(q[1]-qtemp[1])/nStep
+            step3=(q[2]-qtemp[2])/nStep
+            step4=(q[3]-qtemp[3])/nStep
+            step5=(q[4]-qtemp[4])/nStep
+            step6=(q[5]-qtemp[5])/nStep
            
            
             
-    #         for i in range(0,nStep):
-    #                     qtemp[0]+=step1
-    #                     qtemp[1]+=step2
-    #                     qtemp[2]+=step3
-    #                     qtemp[3]+=step4
-    #                     qtemp[4]+=step5
-    #                     qtemp[5]+=step6
-    #                     print(qtemp[1],qtemp[2],qtemp[3])
+            for i in range(0,nStep):
+                        qtemp[0]+=step1
+                        qtemp[1]+=step2
+                        qtemp[2]+=step3
+                        qtemp[3]+=step4
+                        qtemp[4]+=step5
+                        qtemp[5]+=step6
+                        print(qtemp[1],qtemp[2],qtemp[3])
 
-    #                     self.calculPos(qtemp) # cela va mettre  a jour les variables Pos donc PARFAITTTT
-    #                     self.window.fill((232,220,202))
-    #                     self.drawPygame()
-    #                     pygame.time.wait(100)
+                        self.calculPos(qtemp) # cela va mettre  a jour les variables Pos donc PARFAITTTT
+                        self.window.fill((232,220,202))
+                        self.drawPygame()
+                        pygame.time.wait(100)
 
 
-    #         while running:
-    #             pygame.event.pump() # process event queue
-    #             keys= pygame.key.get_pressed()
-    #             for event in pygame.event.get():
-    #                 if event.type == pygame.QUIT:  # Fermer la fenêtre
-    #                     running = False
+            while running:
+                pygame.event.pump() # process event queue
+                keys= pygame.key.get_pressed()
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:  # Fermer la fenêtre
+                        running = False
                         
-    #                 if keys[ord('z')] or keys[pygame.K_UP]: 
-    #                     pass
+                    if keys[ord('z')] or keys[pygame.K_UP]: 
+                        pass
                     
                     
                     
                       
 
                 
-    #             self.clock.tick(self.FPS)  
-                
+                self.clock.tick(self.FPS)  
+
+    def interpolate(self,a0, a1, t):
+        return (1 - t) * a0 + t * a1
+         
+    def runPygame2(self,qfinal):
+        
+        alphaf1 = qfinal[0]
+        betaf1 = qfinal[1]
+        alphaf2 = qfinal[2]
+        betaf2 = qfinal[3]
+        alphaf3 = qfinal[4]
+        betaf3 = qfinal[5]
+
+        print(qfinal)
+        q0=self.q0.flatten()
+        print(f'q0: {q0}')
+        alphai1 =q0[0]
+        betai1 = q0[1]
+        alphai2 = q0[2]
+        betai2 = q0[3]
+        alphai3 = q0[4]
+        betai3 = q0[5]
+ 
+
+        self.calculPos(q0)
+        self.drawPygame()
+
+        # Interpolation
+        steps = 100
+        frame = 0
+
+        running = True
+        while running:
+            t=min(frame/steps,1.0) # facteur t pour l'interpolation
+            q=[]
+            alpha1 = self.interpolate(alphai1,alphaf1,t)
+            beta1 = self.interpolate(betai1,betaf1,t)
+            alpha2 = self.interpolate(alphai2,alphaf2,t)
+            beta2 = self.interpolate(betai2,betaf2,t)
+            alpha3 = self.interpolate(alphai3,alphaf3,t)
+            beta3 = self.interpolate(betai3,betaf3,t)
+            
+            q.extend([alpha1.item(),beta1.item(),alpha2.item(),beta2.item(),alpha3.item(),beta3.item()])
+            print(q)
+            self.calculPos(q)
+            
+            self.window.fill((232,220,202))
+
+            self.drawPygame()
+
+            self.clock.tick(60)
+
+            frame += 1
+            if frame > steps:
+                frame = steps  # stop interpolation here
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
 

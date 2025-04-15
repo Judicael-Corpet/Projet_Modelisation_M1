@@ -26,11 +26,11 @@ def main():
     robot.traceRobot("Non_Linéaire")
     # 2ième méthode : Résolution analytique du MGI 2R plan :renvoie alphi_i et beta_i
     q=robot.MGI_analytique()
-    robot.calculPos(q)
+    # robot.calculPos(q)
     # robot.traceRobot("MGI_Analytique")
 
     # Pygame 
-    # robot.runPygame(q)
+    robot.runPygame2(q)
 
 if __name__=="__main__":
     main()
