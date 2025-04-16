@@ -300,6 +300,7 @@ class Robot():
             result=True
         return result
 
+# _____________FONCTIONS PYGAME__________________
 
     def randcolor(self):
         r= random.randint(0,255)
@@ -494,74 +495,10 @@ class Robot():
                 
                 self.clock.tick(self.FPS)  
 
-    def interpolate(self,a0, a1, t):
-        return (1 - t) * a0 + t * a1
-
     def move_effector(self, dx, dy):
         # Déplacer l'effecteur avec les touches clavier
         self.pos_eff[0] += dx
         self.pos_eff[1] += dy
-
-
-
-
-    def runPygame2(self,qfinal):
-        
-        alphaf1 = qfinal[0]
-        betaf1 = qfinal[1]
-        alphaf2 = qfinal[2]
-        betaf2 = qfinal[3]
-        alphaf3 = qfinal[4]
-        betaf3 = qfinal[5]
-
-        print(qfinal)
-        q0=self.q0.flatten()
-        print(f'q0: {q0}')
-        alphai1 =q0[0]
-        betai1 = q0[1]
-        alphai2 = q0[2]
-        betai2 = q0[3]
-        alphai3 = q0[4]
-        betai3 = q0[5]
- 
-
-        self.calculPosPygame(q0)
-        self.drawPygame()
-
-        # Interpolation
-        steps = 100
-        frame = 0
-
-        running = True
-        while running:
-            t=min(frame/steps,1.0) # facteur t pour l'interpolation
-            q=[]
-            alpha1 = self.interpolate(alphai1,alphaf1,t)
-            beta1 = self.interpolate(betai1,betaf1,t)
-            alpha2 = self.interpolate(alphai2,alphaf2,t)
-            beta2 = self.interpolate(betai2,betaf2,t)
-            alpha3 = self.interpolate(alphai3,alphaf3,t)
-            beta3 = self.interpolate(betai3,betaf3,t)
-            
-            q.extend([alpha1.item(),beta1.item(),alpha2.item(),beta2.item(),alpha3.item(),beta3.item()])
-            print(q)
-            self.calculPosPygame(q)
-            
-            self.window.fill((232,220,202))
-
-            self.drawPygame()
-
-            self.clock.tick(60)
-
-            frame += 1
-            if frame > steps:
-                frame = steps  # stop interpolation here
-
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-
-            
 
     def runPygame3(self,qfinal):
 
@@ -596,3 +533,65 @@ class Robot():
             self.clock.tick(self.FPS)  # Limiter la vitesse de l'animation
 
         pygame.quit()
+
+    # def interpolate(self,a0, a1, t):
+    #     return (1 - t) * a0 + t * a1
+
+    # def runPygame2(self,qfinal):
+        
+    #     alphaf1 = qfinal[0]
+    #     betaf1 = qfinal[1]
+    #     alphaf2 = qfinal[2]
+    #     betaf2 = qfinal[3]
+    #     alphaf3 = qfinal[4]
+    #     betaf3 = qfinal[5]
+
+    #     print(qfinal)
+    #     q0=self.q0.flatten()
+    #     print(f'q0: {q0}')
+    #     alphai1 =q0[0]
+    #     betai1 = q0[1]
+    #     alphai2 = q0[2]
+    #     betai2 = q0[3]
+    #     alphai3 = q0[4]
+    #     betai3 = q0[5]
+ 
+
+    #     self.calculPosPygame(q0)
+    #     self.drawPygame()
+
+    #     # Interpolation
+    #     steps = 100
+    #     frame = 0
+
+    #     running = True
+    #     while running:
+    #         t=min(frame/steps,1.0) # facteur t pour l'interpolation
+    #         q=[]
+    #         alpha1 = self.interpolate(alphai1,alphaf1,t)
+    #         beta1 = self.interpolate(betai1,betaf1,t)
+    #         alpha2 = self.interpolate(alphai2,alphaf2,t)
+    #         beta2 = self.interpolate(betai2,betaf2,t)
+    #         alpha3 = self.interpolate(alphai3,alphaf3,t)
+    #         beta3 = self.interpolate(betai3,betaf3,t)
+            
+    #         q.extend([alpha1.item(),beta1.item(),alpha2.item(),beta2.item(),alpha3.item(),beta3.item()])
+    #         print(q)
+    #         self.calculPosPygame(q)
+            
+    #         self.window.fill((232,220,202))
+
+    #         self.drawPygame()
+
+    #         self.clock.tick(60)
+
+    #         frame += 1
+    #         if frame > steps:
+    #             frame = steps  # stop interpolation here
+
+    #         for event in pygame.event.get():
+    #             if event.type == pygame.QUIT:
+    #                 running = False
+
+            
+
