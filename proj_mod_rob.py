@@ -288,10 +288,10 @@ class Robot():
 
         return np.array(F)
 
-    def no_linear(self):
+    def no_linear(self,q0):
         # 1ère méthode: Résoudre le système d'équations non linéaires
         from scipy.optimize import fsolve
-        q = fsolve(lambda q: self.solve_eq_NL(q), self.q0)
+        q = fsolve(lambda q: self.solve_eq_NL(q), q0)
         return q
     
     def check_extesnsion(self,q):
@@ -299,6 +299,7 @@ class Robot():
         if q[1]==0 or q[3]==0 or q[5]==0:
             result=True
         return result
+
 
     def randcolor(self):
         r= random.randint(0,255)
@@ -308,8 +309,111 @@ class Robot():
         return r,g,b
 
     def convertToPygame(self,c):
-        coo=c.copy()
-        return (self.width//2+coo[0]*self.scale,self.height//2- coo[1]*self.scale)
+        x= self.width//2+ c[0]*self.scale
+        y= self.height//2 - c[1]*self.scale
+  
+
+        return (x,y)
+
+    def calculPosPygame(self,q):
+        alpha1 = q[0]
+        beta1 = q[1]
+        alpha2 = q[2]
+        beta2 = q[3]
+        alpha3 = q[4]
+        beta3 = q[5]
+
+        # Matrices de rotation 2*2
+        Rot1 = np.array([[cos(2 * pi / 3), -sin(2 * pi / 3)],
+                        [sin(2 * pi / 3), cos(2 * pi / 3)]])
+        Rot2 = np.array([[cos(4 * pi / 3), -sin(4 * pi / 3)],
+                        [sin(4 * pi / 3), cos(4 * pi / 3)]])
+
+        # Vecteurs
+        self.P10 = np.array([0, -self.Rb])
+
+        T1 = np.array([
+            [1, 0, 0],
+            [0, 1, -self.Rb],
+            [0, 0, 1]
+        ])
+
+        # --- P11 ---
+        P11_vec = np.array([
+            self.L1 * np.cos(alpha1),
+            self.L1 * np.sin(alpha1),
+            1
+        ])
+        self.P11 = T1 @ P11_vec
+
+        # --- P12 ---
+        P12_vec = np.array([
+            self.L1 * np.cos(alpha1) + self.L2 * np.cos(alpha1 + beta1),
+            self.L1 * np.sin(alpha1) + self.L2 * np.sin(alpha1 + beta1),
+            1
+        ])
+        self.P12 = T1 @ P12_vec
+
+        # --- P20 ---
+        self.P20 = np.array([
+            self.Rb * np.sqrt(3) / 2,
+            self.Rb / 2
+        ])
+
+        # --- Matrice homogène pour P21 et P22 ---
+        T2 = np.block([
+            [Rot1, self.P20.reshape(2, 1)],
+            [np.zeros((1, 2)), np.array([[1]])]
+        ])
+
+        T22 = np.block([
+            [Rot1, self.P20.reshape(2, 1)],
+            [np.zeros((1, 2)), np.array([[1]])]
+        ])
+
+        # --- P21 ---
+        P21_vec = np.array([
+            self.L1 * np.cos(alpha2),
+            -self.L1 * np.sin(alpha2),
+            1
+        ])
+        self.P21 = T22 @ P21_vec
+
+        # --- P22 ---
+        P22_vec = np.array([
+            self.L1 * np.cos(alpha2) + self.L2 * np.cos(alpha2 + beta2),
+            self.L1 * np.sin(alpha2) + self.L2 * np.sin(alpha2 + beta2),
+            1
+        ])
+        self.P22 = T2 @ P22_vec
+
+        # --- P30 ---
+        self.P30 = np.array([
+            -self.Rb * np.sqrt(3) / 2,
+            self.Rb / 2
+        ])
+
+        # --- Matrice homogène pour P31 et P32 ---
+        T3 = np.block([
+            [Rot2,self.P30.reshape(2, 1)],
+            [np.zeros((1, 2)), np.array([[1]])]
+        ])
+
+        # --- P31 ---
+        P31_vec = np.array([
+            self.L1 * np.cos(alpha3),
+            self.L1 * np.sin(alpha3),
+            1
+        ])
+        self.P31 = T3 @ P31_vec
+
+        # --- P32 ---
+        P32_vec = np.array([
+            self.L1 * np.cos(alpha3) + self.L2 * np.cos(alpha3 + beta3),
+            self.L1 * np.sin(alpha3) + self.L2 * np.sin(alpha3 + beta3),
+            1
+        ])
+        self.P32 = T3 @ P32_vec
 
     def drawPygame(self):
         # color bras
@@ -392,7 +496,15 @@ class Robot():
 
     def interpolate(self,a0, a1, t):
         return (1 - t) * a0 + t * a1
-         
+
+    def move_effector(self, dx, dy):
+        # Déplacer l'effecteur avec les touches clavier
+        self.pos_eff[0] += dx
+        self.pos_eff[1] += dy
+
+
+
+
     def runPygame2(self,qfinal):
         
         alphaf1 = qfinal[0]
@@ -413,7 +525,7 @@ class Robot():
         betai3 = q0[5]
  
 
-        self.calculPos(q0)
+        self.calculPosPygame(q0)
         self.drawPygame()
 
         # Interpolation
@@ -433,7 +545,7 @@ class Robot():
             
             q.extend([alpha1.item(),beta1.item(),alpha2.item(),beta2.item(),alpha3.item(),beta3.item()])
             print(q)
-            self.calculPos(q)
+            self.calculPosPygame(q)
             
             self.window.fill((232,220,202))
 
@@ -449,3 +561,38 @@ class Robot():
                 if event.type == pygame.QUIT:
                     running = False
 
+            
+
+    def runPygame3(self,qfinal):
+
+
+        running = True
+        while running:
+            self.window.fill((232, 220, 202))  # Réinitialiser la fenêtre
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+
+            # Gestion des entrées clavier
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_UP]:
+                self.move_effector(0, -0.001)  # Déplacer l'effecteur vers le haut
+            if keys[pygame.K_DOWN]:
+                self.move_effector(0, 0.001)  # Déplacer l'effecteur vers le bas
+            if keys[pygame.K_LEFT]:
+                self.move_effector(-0.001, 0)  # Déplacer l'effecteur vers la gauche
+            if keys[pygame.K_RIGHT]:
+                self.move_effector(0.001, 0)  # Déplacer l'effecteur vers la droite
+
+            # Recalculer la position du robot
+            q = self.MGI_analytique()  # Résolution analytique des angles
+            self.calculPosPygame(q)
+
+            # Tracer le robot
+            self.drawPygame()
+
+            # Mettre à jour l'affichage
+            pygame.display.update()
+            self.clock.tick(self.FPS)  # Limiter la vitesse de l'animation
+
+        pygame.quit()
