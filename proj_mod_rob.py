@@ -461,8 +461,6 @@ class Robot():
             step5=(q[4]-qtemp[4])/nStep
             step6=(q[5]-qtemp[5])/nStep
            
-           
-            
             for i in range(0,nStep):
                         qtemp[0]+=step1
                         qtemp[1]+=step2
@@ -487,11 +485,6 @@ class Robot():
                         
                     if keys[ord('z')] or keys[pygame.K_UP]: 
                         pass
-                    
-                    
-                    
-                      
-
                 
                 self.clock.tick(self.FPS)  
 
