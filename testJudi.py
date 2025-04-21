@@ -1,5 +1,6 @@
 import pygame
 import numpy as np
+import math
 import tkinter as tk #Permet de demander à l'utilisateur de rentrer des valeurs
 #On n'utilise pas input car la fenêtre est bloquante dans pygame, contrairement à tkinter
 from tkinter import simpledialog
@@ -29,6 +30,11 @@ class Robot3RRR:
         self.tracing_enabled = False #booléen pour activer/désactiver le tracé
         self.Rb = R  # Rayon de la base fixe
         self.Re = r  # Rayon de la plateforme mobile
+        # Liste des positions cibles à atteindre (en mètres)
+        self.positions_cibles = [(30, 30), (-40, -15), (0, 30), (0, 0)]
+        # Variables de contrôle du mode automatique
+        self.mode_suivi = False
+        self.index_cible = 0
 
     #Fonction rotation : applique une rotation 2D autour de l'origine à un point donné
     def rotate(self, point, angle):
@@ -239,6 +245,11 @@ class Robot3RRR:
             color = RED if self.tracing_enabled else WHITE
             pygame.draw.lines(win, color, False, self.trajectory, 2)
 
+        #traçage de la trajectoire 
+        if len(self.trajectory) > 1:
+            points_trajectoire = [self.to_screen(*P) for P in self.trajectory]
+            pygame.draw.lines(win, (255, 0, 255), False, points_trajectoire, 3)  # violet, épaisseur 3
+
         # Calcul des angles theta pour chaque bras
         q = self.MGI_analytique()
         theta_values = q[0::2]  # Les valeurs de theta sont les éléments pairs de q
@@ -272,25 +283,9 @@ def main():
                 if event.key == pygame.K_t:
                     robot.tracing_enabled = not robot.tracing_enabled
                 elif event.key == pygame.K_m:
-                    # Ouvrir une fenêtre de dialogue pour saisir les coordonnées
-                    root = tk.Tk()
-                    root.withdraw()  # Ne pas afficher la fenêtre principale Tk
-
-                    try:
-                        user_input = simpledialog.askstring("Déplacement du robot", "Entrez x, y, θ (en degrés), séparés par des virgules :")
-                        if user_input:
-                            x_str, y_str, theta_str = user_input.split(",")
-                            target_x = float(x_str.strip())
-                            target_y = float(y_str.strip())
-                            target_theta = np.radians(float(theta_str.strip()))
-
-                            if robot.is_valid_position(target_x, target_y):
-                                robot.move_to(target_x, target_y, target_theta)
-                            else:
-                                print("Position invalide : en dehors de l’espace de travail.")
-                    except Exception as e:
-                        print("Erreur de saisie :", e)
-
+                    robot.mode_suivi = True
+                    index_cible = 0
+                    print("Mode suivi automatique activé.")
 
         keys = pygame.key.get_pressed()
         new_x, new_y = robot.x, robot.y
@@ -311,6 +306,38 @@ def main():
         # Vérification de la validité de la nouvelle position
         if robot.is_valid_position(new_x, new_y):
             robot.x, robot.y = new_x, new_y
+
+
+        if robot.mode_suivi and robot.index_cible < len(robot.positions_cibles):
+            x_cible, y_cible = robot.positions_cibles[robot.index_cible]
+
+            dx = x_cible - robot.x
+            dy = y_cible - robot.y
+            dist = math.hypot(dx, dy)
+
+            if dist > 0.1:  # tolérance
+                pas = 0.2
+                robot.x += pas * dx / dist
+                robot.y += pas * dy / dist
+
+                solutions = robot.MGI_analytique()
+
+                if solutions is None:
+                    print(f"Position interdite pour ({robot.x:.3f}, {robot.y:.3f}). Arrêt du suivi.")
+                    robot.mode_suivi = False
+                else:
+                    theta1 = solutions
+            else:
+                robot.index_cible += 1
+                print(f"Cible {robot.index_cible} atteinte.")
+                if robot.index_cible == len(robot.positions_cibles):
+                    print("Toutes les cibles ont été atteintes.")
+                    robot.mode_suivi = False
+
+            robot.trajectory.append((robot.x, robot.y))
+
+            if not robot.trajectory or (robot.x, robot.y) != robot.trajectory[-1]:
+                robot.trajectory.append((robot.x, robot.y))
 
         robot.draw(win, font)
 
