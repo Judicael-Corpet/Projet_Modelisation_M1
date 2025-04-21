@@ -1,5 +1,9 @@
 import pygame
 import numpy as np
+import tkinter as tk #Permet de demander à l'utilisateur de rentrer des valeurs
+#On n'utilise pas input car la fenêtre est bloquante dans pygame, contrairement à tkinter
+from tkinter import simpledialog
+
 
 # Constantes pour les dimensions et les couleurs
 WIDTH, HEIGHT = 800, 800
@@ -244,7 +248,6 @@ class Robot3RRR:
         text4 = font.render(f"Orientation: {np.degrees(self.theta):.1f}°", True, BLACK)
         win.blit(coord_text, (10, 10))
         win.blit(text4, (10, 70))
-
         pygame.display.update()
 
 def main():
@@ -258,7 +261,7 @@ def main():
     font = pygame.font.SysFont(None, 36)
 
     robot = Robot3RRR()
-
+    
     run = True
     while run:
         clock.tick(FPS)
@@ -269,11 +272,25 @@ def main():
                 if event.key == pygame.K_t:
                     robot.tracing_enabled = not robot.tracing_enabled
                 elif event.key == pygame.K_m:
-                    # Exemple de déplacement vers des coordonnées spécifiques
-                    target_x = 28
-                    target_y = 38
-                    target_theta = 0
-                    robot.move_to(target_x, target_y, target_theta)
+                    # Ouvrir une fenêtre de dialogue pour saisir les coordonnées
+                    root = tk.Tk()
+                    root.withdraw()  # Ne pas afficher la fenêtre principale Tk
+
+                    try:
+                        user_input = simpledialog.askstring("Déplacement du robot", "Entrez x, y, θ (en degrés), séparés par des virgules :")
+                        if user_input:
+                            x_str, y_str, theta_str = user_input.split(",")
+                            target_x = float(x_str.strip())
+                            target_y = float(y_str.strip())
+                            target_theta = np.radians(float(theta_str.strip()))
+
+                            if robot.is_valid_position(target_x, target_y):
+                                robot.move_to(target_x, target_y, target_theta)
+                            else:
+                                print("Position invalide : en dehors de l’espace de travail.")
+                    except Exception as e:
+                        print("Erreur de saisie :", e)
+
 
         keys = pygame.key.get_pressed()
         new_x, new_y = robot.x, robot.y
@@ -285,6 +302,11 @@ def main():
             new_y += 2
         if keys[pygame.K_DOWN]:
             new_y -= 2
+        if keys[pygame.K_q]:
+            robot.theta += np.radians(2)
+        if keys[pygame.K_e]:
+            robot.theta -= np.radians(2)
+
 
         # Vérification de la validité de la nouvelle position
         if robot.is_valid_position(new_x, new_y):
