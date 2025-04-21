@@ -44,6 +44,7 @@ class Robot():
         self.scale= self.width/self.dimensionPlateau
         print(self.scale)
     
+    # Fonctions pour récupérer les valeurs des paramètres
     def get_L1(self):
         return self.L1
     

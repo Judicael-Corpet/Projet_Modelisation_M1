@@ -21,32 +21,50 @@ class Robot3RRR:
         self.y = y
         self.theta = theta
         self.pos_eff = [x, y, theta]  # Position de l'effecteur
+        #Calcule les coordonnées des 3 points fixes Ai sur un cercle de rayon R, espacés de 120°:
         self.Ai_list = [(R * np.cos(2 * i * np.pi / 3), R * np.sin(2 * i * np.pi / 3)) for i in range(3)]
+        #Coordonnées locales des points Pi de la plateforme mobile, aussi espacés de 120°:
         self.Pi_local = [(r * np.cos(2 * i * np.pi / 3), r * np.sin(2 * i * np.pi / 3)) for i in range(3)]
-        self.trajectory = []
-        self.tracing_enabled = False
+        self.trajectory = [] #stocke les positions successives du centre de l’effecteur
+        self.tracing_enabled = False #booléen pour activer/désactiver le tracé
         self.Rb = R  # Rayon de la base fixe
         self.Re = r  # Rayon de la plateforme mobile
 
+    #Fonction rotation : applique une rotation 2D autour de l'origine à un point donné
     def rotate(self, point, angle):
         x, y = point
         return (x * np.cos(angle) - y * np.sin(angle),
                 x * np.sin(angle) + y * np.cos(angle))
 
+    #Fonction pour convertir les coordonnées en coordonnées écran :
+    #Convertit des coordonnées cartésiennes vers les coordonnées écran Pygame :
+    #(0,0) est au centre de l'écran
+    #L’axe y est inversé pour correspondre au haut de l’écran
     def to_screen(self, x, y):
         return int(WIDTH / 2 + x), int(HEIGHT / 2 - y)
 
+    #Fonction pour vérifier qu'on est bien dans la zone de travail :
+    #Vérifie si la position (x, y) de l’effecteur est atteignable
     def is_valid_position(self, x, y):
         Pi_global = [(x + self.rotate(p, self.theta)[0], y + self.rotate(p, self.theta)[1]) for p in self.Pi_local]
+        #Calcule de la distance entre chaque Ai et son Pi :
         for Ai, Pi in zip(self.Ai_list, Pi_global):
             dx = Pi[0] - Ai[0]
             dy = Pi[1] - Ai[1]
             d = np.hypot(dx, dy)
             if d > L1 + L2:
-                return False
-        return True
+                return False #Position non atteignable
+        return True #Position atteignable
 
     def MGI_analytique(self):
+        """
+        Fonction MGI : calcule les angles α et β des 3 bras pour atteindre une position donnée de l’effecteur
+        Ce que la fonction réalise :
+        - Transformation de l’effecteur R_E -> R_0
+        - Pour chaque bras, transformation R_i -> R_0
+        - Calcule les coordonnées de Ei dans R_i
+        - Applique la formule du robot 2R plan (triangle de cosinus) pour trouver β puis α.
+        """
         # Matrice de rotation et translation de l'effecteur
         RotEff = np.array([[np.cos(self.pos_eff[2]), -np.sin(self.pos_eff[2])], [np.sin(self.pos_eff[2]), np.cos(self.pos_eff[2])]])
         Transl = np.array([self.pos_eff[0], self.pos_eff[1]])
@@ -93,7 +111,16 @@ class Robot3RRR:
 
         return np.array(q)
 
+    
     def solve_eq_NL(self, q):
+        """
+        Fonction qui vérifie la solution avec des équations non linéaires  
+        Données les angles q = [α1, β1, α2, β2, α3, β3], vérifie qu’ils mènent bien aux bons points Pi.
+        Pour chaque bras :
+        - Calcule le point Bi atteint avec ces angles.
+        - Compare avec la position cible Ei.
+        - Renvoie la différence (erreur) sous forme d’un vecteur.
+        """
         if self.check_extension(q):
             print("Il y a une singularité: extension")
         # Variables globales
@@ -135,12 +162,20 @@ class Robot3RRR:
             F.append(PBi[1] - PEi_0[1])  # y
 
         return np.array(F)
-
+    #Fonction pour détecter les singularités
     def check_extension(self, q):
         # Vérifie si les bras sont en extension complète
         return np.allclose(q[1::2], 0)
 
     def move_to(self, x, y, theta):
+        """
+        Fonction pour déplacer le robot vers une position donnée  
+        Ce que fait la fonction :
+        - Change la position cible de l’effecteur.
+        - Calcule les angles avec MGI.
+        - Vérifie que ces angles mènent à la bonne position avec solve_eq_NL.
+        - Si oui, met à jour la position du robot.
+        """
         self.pos_eff = [x, y, theta]
         q = self.MGI_analytique()
         if np.all(self.solve_eq_NL(q) == 0):
@@ -149,6 +184,15 @@ class Robot3RRR:
             print("Position non atteignable")
 
     def draw(self, win, font):
+        """
+        Affiche tout dans la fenêtre Pygame :  
+        - Bras articulés (Ai → Bi → Pi)
+        - Cercles pour les articulations
+        - Triangle de l’effecteur
+        - Trajectoire si activée
+        - Texte des coordonnées et orientation
+        - Calcul les α à afficher (les theta_values)
+        """
         win.fill(WHITE)
 
         # Calcul des positions globales des points Pi
