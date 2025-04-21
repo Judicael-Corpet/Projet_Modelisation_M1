@@ -9,17 +9,13 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 
-# Paramètres du robot
-L1 = 80  # Longueur du premier segment
-L2 = 80  # Longueur du second segment
-r = 40   # Rayon de la plateforme mobile
-R = 130  # Rayon de la base fixe
-
 class Robot3RRR:
-    def __init__(self, x=0, y=0, theta=0):
+    def __init__(self, x=0, y=0, theta=0, L1= 80, L2=80, r=40, R=130):
         self.x = x
         self.y = y
         self.theta = theta
+        self.L1 = L1
+        self.L2 = L2
         self.pos_eff = [x, y, theta]  # Position de l'effecteur
         #Calcule les coordonnées des 3 points fixes Ai sur un cercle de rayon R, espacés de 120°:
         self.Ai_list = [(R * np.cos(2 * i * np.pi / 3), R * np.sin(2 * i * np.pi / 3)) for i in range(3)]
@@ -52,7 +48,7 @@ class Robot3RRR:
             dx = Pi[0] - Ai[0]
             dy = Pi[1] - Ai[1]
             d = np.hypot(dx, dy)
-            if d > L1 + L2:
+            if d > self.L1 + self.L2:
                 return False #Position non atteignable
         return True #Position atteignable
 
@@ -97,14 +93,14 @@ class Robot3RRR:
             x = PEi_i[0]
             y = PEi_i[1]
 
-            aux = (x**2 + y**2 - L1**2 - L2**2) / (2 * L1 * L2)
+            aux = (x**2 + y**2 - self.L1**2 - self.L2**2) / (2 * self.L1 * self.L2)
             if abs(aux) <= 1:
                 beta = np.arccos(aux)
             else:
                 raise ValueError(f"Position inatteignable pour le bras {i+1} : aux = {aux:.4f}")
 
 
-            alpha = np.arctan2(y, x) - np.arctan2(L2 * np.sin(beta), L1 + L2 * np.cos(beta))
+            alpha = np.arctan2(y, x) - np.arctan2(self.L2 * np.sin(beta), self.L1 + self.L2 * np.cos(beta))
 
             q.append(alpha)
             q.append(beta)
@@ -153,8 +149,8 @@ class Robot3RRR:
             THRi_0 = np.block([[Rot, np.array([self.Rb * np.cos(ang2[i]), self.Rb * np.sin(ang2[i])]).reshape(-1, 1)], [0, 0, 1]])
 
             # Points B_i, extrémités des bras en fonction de alpha_i et beta_i dans R_0
-            PBi = THRi_0 @ np.array([L1 * np.cos(alpha[i]) + L2 * np.cos(alpha[i] + beta[i]),
-                                     L1 * np.sin(alpha[i]) + L2 * np.sin(alpha[i] + beta[i]),
+            PBi = THRi_0 @ np.array([self.L1 * np.cos(alpha[i]) + self.L2 * np.cos(alpha[i] + beta[i]),
+                                     self.L1 * np.sin(alpha[i]) + self.L2 * np.sin(alpha[i] + beta[i]),
                                      1])
 
             # Les contraintes expriment que B_i doit être confondu avec E_i
@@ -204,10 +200,10 @@ class Robot3RRR:
             dx = Pi[0] - Ai[0]
             dy = Pi[1] - Ai[1]
             d = np.hypot(dx, dy)
-            a = np.arccos((L1**2 + d**2 - L2**2) / (2 * L1 * d))
+            a = np.arccos((self.L1**2 + d**2 - self.L2**2) / (2 * self.L1 * d))
             phi = np.arctan2(dy, dx)
             theta_i = phi - a
-            Bi = (Ai[0] + L1 * np.cos(theta_i), Ai[1] + L1 * np.sin(theta_i))
+            Bi = (Ai[0] + self.L1 * np.cos(theta_i), Ai[1] + self.L1 * np.sin(theta_i))
 
             # Conversion des coordonnées en coordonnées écran
             Ai_s = self.to_screen(*Ai)
