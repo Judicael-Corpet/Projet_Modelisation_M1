@@ -168,6 +168,7 @@ class Robot3RRR:
             F.append(PBi[1] - PEi_0[1])  # y
 
         return np.array(F)
+    
     #Fonction pour détecter les singularités
     def check_extension(self, q):
         # Vérifie si les bras sont en extension complète
