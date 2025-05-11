@@ -229,12 +229,11 @@ class Robot3RRR:
         """
         win.fill(WHITE)
 
-        # Calcul des positions globales des points Pi
+        # Calcul des positions globales des points Pi (effecteur)
         Pi_global = [(self.x + self.rotate(p, self.theta)[0], self.y + self.rotate(p, self.theta)[1]) for p in self.Pi_local]
 
         # Dessin des segments du robot
         for Ai, Pi in zip(self.Ai_list, Pi_global):
-            # Calcul des positions des points Bi
             dx = Pi[0] - Ai[0]
             dy = Pi[1] - Ai[1]
             d = np.hypot(dx, dy)
@@ -243,80 +242,67 @@ class Robot3RRR:
             theta_i = phi - a
             Bi = (Ai[0] + self.L1 * np.cos(theta_i), Ai[1] + self.L1 * np.sin(theta_i))
 
-            # Conversion des coordonnées en coordonnées écran
+            # Coordonnées écran
             Ai_s = self.to_screen(*Ai)
             Bi_s = self.to_screen(*Bi)
             Pi_s = self.to_screen(*Pi)
 
-            # Dessin des segments et des articulations
             pygame.draw.line(win, BLACK, Ai_s, Bi_s, 3)
             pygame.draw.line(win, BLUE, Bi_s, Pi_s, 3)
             pygame.draw.circle(win, RED, Ai_s, 5)
             pygame.draw.circle(win, GREEN, Bi_s, 5)
             pygame.draw.circle(win, RED, Pi_s, 5)
 
-        # Dessin du triangle effecteur
+        # Triangle effecteur
         triangle_points = [self.to_screen(*P) for P in Pi_global]
         pygame.draw.polygon(win, (150, 200, 255), triangle_points, width=3)
 
-        # Calcul du centre de l'effecteur
+        # Centre effecteur (moyenne des Pi)
         center_x = sum([p[0] for p in Pi_global]) / 3
         center_y = sum([p[1] for p in Pi_global]) / 3
         center_screen = self.to_screen(center_x, center_y)
-        # Dessin d'une flèche indiquant l'orientation de l'effecteur
-        longueur_fleche = 20  # en pixels
-        angle = self.theta
-        fleche_x = center_x + longueur_fleche * np.cos(angle)
-        fleche_y = center_y + longueur_fleche * np.sin(angle)
 
-        start = self.to_screen(center_x, center_y)
-        end = self.to_screen(fleche_x, fleche_y)
-        pygame.draw.line(win, (0, 0, 0), start, end, 3)
-
-
-        # Ajout du centre réel à la trajectoire si le traçage est activé
+        # Ajout du centre à la trajectoire si le traçage est activé (en coordonnées monde uniquement)
         if self.tracing_enabled:
-            if not self.trajectory or (abs(center_x - self.trajectory[-1][0]) > 0.1 or abs(center_y - self.trajectory[-1][1]) > 0.1):
-                self.trajectory.append((center_x, center_y))
+            if abs(center_x) < 1000 and abs(center_y) < 1000:  # garde-fou
+                if not self.trajectory or (abs(center_x - self.trajectory[-1][0]) > 0.1 or abs(center_y - self.trajectory[-1][1]) > 0.1):
+                    self.trajectory.append((center_x, center_y))
+
         # Dessin de la trajectoire
         if len(self.trajectory) > 1:
-            color = RED if self.tracing_enabled else WHITE
-            pygame.draw.lines(win, color, False, self.trajectory, 2)
-
-        #traçage de la trajectoire 
-        if len(self.trajectory) > 1:
             points_trajectoire = [self.to_screen(*P) for P in self.trajectory]
-            pygame.draw.lines(win, (255, 0, 255), False, points_trajectoire, 3)  # violet, épaisseur 3
+            pygame.draw.lines(win, (255, 0, 255), False, points_trajectoire, 3)
 
-        # Calcul des angles theta pour chaque bras
+        # Calcul des angles
         q = self.MGI_analytique()
-        
-        alpha_vals = q[0::2]  # α1, α2, α3 (éléments pairs de la liste de q)
-        beta_vals = q[1::2]   # β1, β2, β3 (éléments impairs de la iste de q)
-        # Affichage des coordonnées de l'effecteur et des angles theta
-        coord_text = font.render(f"Coordonnées: ({center_x:.2f}, {center_y:.2f})", True, BLACK)
-        text4 = font.render(f"Orientation: {np.degrees(self.theta):.1f}°", True, BLACK)
-        win.blit(coord_text, (10, 10))
-        win.blit(text4, (10, 40))
+        alpha_vals = q[0::2]
+        beta_vals = q[1::2]
 
-        # Affichage dynamique des angles αi et βi (en degrés)
+        # Affichage infos
+        text_pos = font.render(f"Coordonnées: ({self.x:.2f}, {self.y:.2f})", True, BLACK)
+        text_theta = font.render(f"Orientation: {np.degrees(self.theta):.1f}°", True, BLACK)
+        win.blit(text_pos, (10, 10))
+        win.blit(text_theta, (10, 40))
+
         for i, (alpha, beta) in enumerate(zip(alpha_vals, beta_vals)):
-            angle_text = font.render(
-                f"Bras {i+1}: α{i+1}={np.degrees(alpha):.1f}°, β{i+1}={np.degrees(beta):.1f}°",
-                True, (0, 0, 150)
-            )
+            angle_text = font.render(f"Bras {i+1}: α{i+1}={np.degrees(alpha):.1f}°, β{i+1}={np.degrees(beta):.1f}°", True, (0, 0, 150))
             win.blit(angle_text, (10, 80 + i * 30))
 
-        # Vérification de singularité d'extension
+        # Détection de singularités
         if self.check_extension(q):
-            singularity_text = font.render("Singularité : bras en extension complète", True, (255, 0, 0))
-            win.blit(singularity_text, (10, 200))  # Affiche le texte en rouge en bas des autres infos
-        
-        if self.check_singularite_parallele(q):
-            singularity_text2 = font.render("Singularité : géométrie parallèle (det(A)≈0)", True, (255, 100, 0))
-            win.blit(singularity_text2, (10, 180))
+            sing_text = font.render("Singularité : bras en extension", True, (255, 0, 0))
+            win.blit(sing_text, (10, 180))
 
-        print( f" q = {q}")
+        if self.check_singularite_parallele(q):
+            sing_text2 = font.render("Singularité : configuration parallèle", True, (255, 100, 0))
+            win.blit(sing_text2, (10, 210))
+
+        # Flèche d’orientation
+        longueur_fleche = 25
+        fx = center_x + longueur_fleche * np.cos(self.theta)
+        fy = center_y + longueur_fleche * np.sin(self.theta)
+        pygame.draw.line(win, BLACK, self.to_screen(center_x, center_y), self.to_screen(fx, fy), 3)
+
         pygame.display.update()
 
 def generer_trajectory_cercle(xc, yc, rayon, N_points=100):
