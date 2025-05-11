@@ -274,10 +274,10 @@ class Robot3RRR:
         pygame.draw.line(win, (0, 0, 0), start, end, 3)
 
 
-        # Ajout du centre à la trajectoire si le traçage est activé
+        # Ajout du centre réel à la trajectoire si le traçage est activé
         if self.tracing_enabled:
-            self.trajectory.append((center_x, center_y))  # en coordonnées réelles
-
+            if not self.trajectory or (abs(center_x - self.trajectory[-1][0]) > 0.1 or abs(center_y - self.trajectory[-1][1]) > 0.1):
+                self.trajectory.append((center_x, center_y))
         # Dessin de la trajectoire
         if len(self.trajectory) > 1:
             color = RED if self.tracing_enabled else WHITE
@@ -377,34 +377,23 @@ def main():
             dy = y_cible - robot.y
             dist = math.hypot(dx, dy)
 
-            if dist > 0.1:  # tolérance
-                pas = 0.2
+            if dist > 0.5:  # tolérance
+                pas = 0.8  # vitesse de déplacement
                 new_x = robot.x + pas * dx / dist
                 new_y = robot.y + pas * dy / dist
 
                 if robot.is_valid_position(new_x, new_y):
                     robot.move_to(new_x, new_y, robot.theta)
 
-
-                solutions = robot.MGI_analytique()
-
-                if solutions is None:
-                    print(f"Position interdite pour ({robot.x:.3f}, {robot.y:.3f}). Arrêt du suivi.")
-                    robot.mode_suivi = False
-                else:
-                    theta1 = solutions
+                    # Ajouter à la trajectoire uniquement si c'est un nouveau point
+                    if not robot.trajectory or (abs(new_x - robot.trajectory[-1][0]) > 0.1 or abs(new_y - robot.trajectory[-1][1]) > 0.1):
+                        robot.trajectory.append((new_x, new_y))
             else:
                 robot.index_cible += 1
                 print(f"Cible {robot.index_cible} atteinte.")
                 if robot.index_cible == len(robot.positions_cibles):
                     print("Toutes les cibles ont été atteintes.")
                     robot.mode_suivi = False
-
-            robot.trajectory.append((robot.x, robot.y))
-
-            #if not robot.trajectory or (robot.x, robot.y) != robot.trajectory[-1]:
-                #robot.trajectory.append((robot.x, robot.y))
-
 
         robot.draw(win, font)
         
