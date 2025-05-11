@@ -170,10 +170,33 @@ class Robot3RRR:
         return np.array(F)
     
     #Fonction pour détecter les singularités
-    def check_extension(self, q):
-        # Vérifie si les bras sont en extension complète
-        return np.allclose(q[1::2], 0)
+    def check_extension(self, q, tol=0.001):
+        # Vérifie si les bras sont presque en extension (β ≈ 0 avec tolérance)
+        return np.all(np.abs(q[1::2]) < tol)
 
+    
+    def check_singularite_parallele(self, q):
+        gamma = []
+        d = []
+
+        # Angles AiBi
+        Pi_global = [(self.x + self.rotate(p, self.theta)[0], self.y + self.rotate(p, self.theta)[1]) for p in self.Pi_local]
+        
+        for Ai, Pi in zip(self.Ai_list, Pi_global):
+            dx = Pi[0] - Ai[0]
+            dy = Pi[1] - Ai[1]
+            gamma_i = np.arctan2(dy, dx)
+            d_i = (Pi[0] - self.x) * (-np.sin(gamma_i)) + (Pi[1] - self.y) * (np.cos(gamma_i))
+            gamma.append(gamma_i)
+            d.append(d_i)
+
+        # Construction de la matrice A
+        A = np.array([[np.cos(g), np.sin(g), di] for g, di in zip(gamma, d)])
+
+        # Déterminant
+        return np.abs(np.linalg.det(A)) < 1e-3  # Tolérance proche de 0
+
+    
     def move_to(self, x, y, theta):
         """
         Fonction pour déplacer le robot vers une position donnée  
@@ -184,11 +207,15 @@ class Robot3RRR:
         - Si oui, met à jour la position du robot.
         """
         self.pos_eff = [x, y, theta]
-        q = self.MGI_analytique()
-        if np.all(self.solve_eq_NL(q) == 0):
-            self.x, self.y, self.theta = x, y, theta
-        else:
-            print("Position non atteignable")
+        try:
+            q = self.MGI_analytique()
+            #ajout d'une tolérance parce qu'il est difficile d'avoir absolument solve_eq_NL(q) == 0 
+            if np.linalg.norm(self.solve_eq_NL(q)) < 1e-3:
+                self.x, self.y, self.theta = x, y, theta
+            else:
+                print("Position non atteignable (erreur > tolérance)")
+        except ValueError as e:
+            print(f"Position interdite : {e}")
 
     def draw(self, win, font):
         """
@@ -236,10 +263,20 @@ class Robot3RRR:
         center_x = sum([p[0] for p in Pi_global]) / 3
         center_y = sum([p[1] for p in Pi_global]) / 3
         center_screen = self.to_screen(center_x, center_y)
+        # Dessin d'une flèche indiquant l'orientation de l'effecteur
+        longueur_fleche = 20  # en pixels
+        angle = self.theta
+        fleche_x = center_x + longueur_fleche * np.cos(angle)
+        fleche_y = center_y + longueur_fleche * np.sin(angle)
+
+        start = self.to_screen(center_x, center_y)
+        end = self.to_screen(fleche_x, fleche_y)
+        pygame.draw.line(win, (0, 0, 0), start, end, 3)
+
 
         # Ajout du centre à la trajectoire si le traçage est activé
         if self.tracing_enabled:
-            self.trajectory.append(center_screen)
+            self.trajectory.append((center_x, center_y))  # en coordonnées réelles
 
         # Dessin de la trajectoire
         if len(self.trajectory) > 1:
@@ -253,14 +290,37 @@ class Robot3RRR:
 
         # Calcul des angles theta pour chaque bras
         q = self.MGI_analytique()
-        theta_values = q[0::2]  # Les valeurs de theta sont les éléments pairs de q
-
+        
+        alpha_vals = q[0::2]  # α1, α2, α3 (éléments pairs de la liste de q)
+        beta_vals = q[1::2]   # β1, β2, β3 (éléments impairs de la iste de q)
         # Affichage des coordonnées de l'effecteur et des angles theta
         coord_text = font.render(f"Coordonnées: ({center_x:.2f}, {center_y:.2f})", True, BLACK)
         text4 = font.render(f"Orientation: {np.degrees(self.theta):.1f}°", True, BLACK)
         win.blit(coord_text, (10, 10))
-        win.blit(text4, (10, 70))
+        win.blit(text4, (10, 40))
+
+        # Affichage dynamique des angles αi et βi (en degrés)
+        for i, (alpha, beta) in enumerate(zip(alpha_vals, beta_vals)):
+            angle_text = font.render(
+                f"Bras {i+1}: α{i+1}={np.degrees(alpha):.1f}°, β{i+1}={np.degrees(beta):.1f}°",
+                True, (0, 0, 150)
+            )
+            win.blit(angle_text, (10, 80 + i * 30))
+
+        # Vérification de singularité d'extension
+        if self.check_extension(q):
+            singularity_text = font.render("Singularité : bras en extension complète", True, (255, 0, 0))
+            win.blit(singularity_text, (10, 200))  # Affiche le texte en rouge en bas des autres infos
+        
+        if self.check_singularite_parallele(q):
+            singularity_text2 = font.render("Singularité : géométrie parallèle (det(A)≈0)", True, (255, 100, 0))
+            win.blit(singularity_text2, (10, 180))
+
+        print( f" q = {q}")
         pygame.display.update()
+
+def generer_trajectory_cercle(xc, yc, rayon, N_points=100):
+        return [(xc + rayon * np.cos(t), yc + rayon * np.sin(t)) for t in np.linspace(0, 2 * np.pi, N_points)]
 
 def main():
     pygame.init()
@@ -291,13 +351,13 @@ def main():
         keys = pygame.key.get_pressed()
         new_x, new_y = robot.x, robot.y
         if keys[pygame.K_LEFT]:
-            new_x -= 2
+            new_x -= 1
         if keys[pygame.K_RIGHT]:
-            new_x += 2
+            new_x += 1
         if keys[pygame.K_UP]:
-            new_y += 2
+            new_y += 1
         if keys[pygame.K_DOWN]:
-            new_y -= 2
+            new_y -= 1
         if keys[pygame.K_q]:
             robot.theta += np.radians(2)
         if keys[pygame.K_e]:
@@ -306,7 +366,8 @@ def main():
 
         # Vérification de la validité de la nouvelle position
         if robot.is_valid_position(new_x, new_y):
-            robot.x, robot.y = new_x, new_y
+            robot.move_to(new_x, new_y, robot.theta)
+
 
 
         if robot.mode_suivi and robot.index_cible < len(robot.positions_cibles):
@@ -318,8 +379,12 @@ def main():
 
             if dist > 0.1:  # tolérance
                 pas = 0.2
-                robot.x += pas * dx / dist
-                robot.y += pas * dy / dist
+                new_x = robot.x + pas * dx / dist
+                new_y = robot.y + pas * dy / dist
+
+                if robot.is_valid_position(new_x, new_y):
+                    robot.move_to(new_x, new_y, robot.theta)
+
 
                 solutions = robot.MGI_analytique()
 
@@ -337,10 +402,12 @@ def main():
 
             robot.trajectory.append((robot.x, robot.y))
 
-            if not robot.trajectory or (robot.x, robot.y) != robot.trajectory[-1]:
-                robot.trajectory.append((robot.x, robot.y))
+            #if not robot.trajectory or (robot.x, robot.y) != robot.trajectory[-1]:
+                #robot.trajectory.append((robot.x, robot.y))
+
 
         robot.draw(win, font)
+        
 
     pygame.quit()
 
