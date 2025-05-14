@@ -413,6 +413,7 @@ class Robot():
         gamma0 = gammas[0] % np.pi
         return all(np.abs((g % np.pi) - gamma0) < tol or
                 np.abs((g % np.pi) - gamma0 - np.pi) < tol for g in gammas[1:])
+    
 
 # _____________FONCTIONS PYGAME__________________
 
