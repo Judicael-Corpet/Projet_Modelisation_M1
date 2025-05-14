@@ -5,7 +5,6 @@ import tkinter as tk #Permet de demander à l'utilisateur de rentrer des valeurs
 #On n'utilise pas input car la fenêtre est bloquante dans pygame, contrairement à tkinter
 from tkinter import simpledialog
 
-
 # Constantes pour les dimensions et les couleurs
 WIDTH, HEIGHT = 800, 800
 WHITE = (255, 255, 255)
@@ -36,19 +35,21 @@ class Robot3RRR:
         self.mode_suivi = False
         self.index_cible = 0
 
+        self.moteur_mode = False
+        self.alpha_override = 0.0  # Valeur modifiable de alpha3
+
+
     #Fonction rotation : applique une rotation 2D autour de l'origine à un point donné
     def rotate(self, point, angle):
         x, y = point
         return (x * np.cos(angle) - y * np.sin(angle),
                 x * np.sin(angle) + y * np.cos(angle))
-
     #Fonction pour convertir les coordonnées en coordonnées écran :
     #Convertit des coordonnées cartésiennes vers les coordonnées écran Pygame :
     #(0,0) est au centre de l'écran
     #L’axe y est inversé pour correspondre au haut de l’écran
     def to_screen(self, x, y):
         return int(WIDTH / 2 + x), int(HEIGHT / 2 - y)
-
     #Fonction pour vérifier qu'on est bien dans la zone de travail :
     #Vérifie si la position (x, y) de l’effecteur est atteignable
     def is_valid_position(self, x, y):
@@ -59,6 +60,7 @@ class Robot3RRR:
             dy = Pi[1] - Ai[1]
             d = np.hypot(dx, dy)
             if d > self.L1 + self.L2:
+                print("Position non-atteignable")
                 return False #Position non atteignable
         return True #Position atteignable
 
@@ -117,7 +119,6 @@ class Robot3RRR:
 
         return np.array(q)
 
-    
     def solve_eq_NL(self, q):
         """
         Fonction qui vérifie la solution avec des équations non linéaires  
@@ -286,7 +287,7 @@ def main():
                     robot.mode_suivi = True
                     index_cible = 0
                     print("Mode suivi automatique activé.")
-
+                
         keys = pygame.key.get_pressed()
         new_x, new_y = robot.x, robot.y
         if keys[pygame.K_LEFT]:
@@ -301,6 +302,10 @@ def main():
             robot.theta += np.radians(2)
         if keys[pygame.K_e]:
             robot.theta -= np.radians(2)
+        
+
+    
+
 
 
         # Vérification de la validité de la nouvelle position

@@ -14,7 +14,7 @@ while 3RRR Project
 
 class Robot():
 
-    def __init__(self, L1, L2, Rb, Re ,dimensionPlateau ,pos_eff, q0 , name="3RRR"):
+    def __init__(self, L1, L2, Rb, Re ,dimensionPlateau ,pos_eff, q0 ,theta=0, name="3RRR"):
 
         # Variables par défaut
         self.L1 = L1
@@ -24,7 +24,7 @@ class Robot():
         self.dimensionPlateau=dimensionPlateau
         self.pos_eff=pos_eff
         self.q0= q0
-
+        self.theta=theta
 
         # Variables de position du robot
         self.P10, self.P11, self.P12,self.P20,self.P21, self.P22, self.P30, self.P31,self.P32=[],[],[],[],[],[],[],[],[] # pas obligé de les déclaré dans init en réalité
@@ -493,7 +493,15 @@ class Robot():
         # Déplacer l'effecteur avec les touches clavier
         self.pos_eff[0] += dx
         self.pos_eff[1] += dy
-
+    
+    def rotate_motor(self,q,numMotor,dr):
+        if numMotor == 1:
+            q[0]+=dr
+        elif numMotor ==2:
+            q[2]+=dr
+        elif numMotor ==3:
+            q[4]+=dr
+        
     def runPygame3(self,qfinal):
 
 
@@ -515,9 +523,22 @@ class Robot():
             if keys[pygame.K_RIGHT]:
                 self.move_effector(0.001, 0)  # Déplacer l'effecteur vers la droite
 
+        
+
             # Recalculer la position du robot
             q = self.MGI_analytique()  # Résolution analytique des angles
             self.calculPosPygame(q)
+            
+            alpha1 = q[0]
+            beta1 = q[1]
+            alpha2 = q[2]
+            beta2 = q[3]
+            alpha3 = q[4]
+            beta3 = q[5]
+
+            if keys[pygame.K_t]:
+                self.rotate_motor(q,1,0.01)  # Déplacer l'effecteur vers la droite
+                self.calculPos(q)
 
             # Tracer le robot
             self.drawPygame()
