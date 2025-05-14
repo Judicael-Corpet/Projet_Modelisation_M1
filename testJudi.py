@@ -43,22 +43,25 @@ class Robot3RRR:
 
 
 
-    #Fonction rotation : applique une rotation 2D autour de l'origine à un point donné
     def rotate(self, point, angle):
+        #Fonction rotation : applique une rotation 2D autour de l'origine à un point donné
+
         x, y = point
         return (x * np.cos(angle) - y * np.sin(angle),
                 x * np.sin(angle) + y * np.cos(angle))
 
-    #Fonction pour convertir les coordonnées en coordonnées écran :
-    #Convertit des coordonnées cartésiennes vers les coordonnées écran Pygame :
-    #(0,0) est au centre de l'écran
-    #L’axe y est inversé pour correspondre au haut de l’écran
+    
     def to_screen(self, x, y):
+        #Fonction pour convertir les coordonnées en coordonnées écran :
+        #Convertit des coordonnées cartésiennes vers les coordonnées écran Pygame :
+        #(0,0) est au centre de l'écran
+        #L’axe y est inversé pour correspondre au haut de l’écran
         return int(WIDTH / 2 + x), int(HEIGHT / 2 - y)
 
-    #Fonction pour vérifier qu'on est bien dans la zone de travail :
-    #Vérifie si la position (x, y) de l’effecteur est atteignable
+    
     def is_valid_position(self, x, y):
+        #Fonction pour vérifier qu'on est bien dans la zone de travail :
+        #Vérifie si la position (x, y) de l’effecteur est atteignable
         Pi_global = [(x + self.rotate(p, self.theta)[0], y + self.rotate(p, self.theta)[1]) for p in self.Pi_local]
         #Calcule de la distance entre chaque Ai et son Pi :
         for Ai, Pi in zip(self.Ai_list, Pi_global):
@@ -211,8 +214,9 @@ class Robot3RRR:
 
         return np.array(F)
     
-    #Fonction pour détecter les singularités
+
     def check_extension(self, q, tol=0.001):
+        #Fonction pour détecter les singularités
         # Vérifie si les bras sont presque en extension (β ≈ 0 avec tolérance)
         return np.all(np.abs(q[1::2]) < tol)
 
@@ -238,7 +242,7 @@ class Robot3RRR:
         # Déterminant
         return np.abs(np.linalg.det(A)) < 1e-3  # Tolérance proche de 0
 
-    
+
     def move_to(self, x, y, theta):
         """
         Fonction pour déplacer le robot vers une position donnée  
@@ -263,7 +267,6 @@ class Robot3RRR:
         """Recalcule la position de l'effecteur uniquement pour mise à jour du dessin"""
         # Essaie de trouver une pose qui correspond aux q actuels
         self.MGD(self.q)
-
 
     def resoudre_depuis_alpha_fixe(self, index_alpha_fixe, valeur_alpha):
 
@@ -366,9 +369,6 @@ class Robot3RRR:
             print("Dernier guess =", guess)
             print("Erreur finale =", result.fun)
 
-
-
-
     def recalculer_beta_et_pose(self):
         """
         À partir des angles α1, α2, α3 (commandés), recalcule les βi (passifs)
@@ -429,9 +429,6 @@ class Robot3RRR:
         self.y = y
         self.theta = theta
         self.pos_eff = [x, y, theta]
-
-
-
 
     def draw(self, win, font):
         """

@@ -21,16 +21,17 @@ def main():
     robot= Robot(L1,L2,Rb,Re,dimensionPlateau,pos_eff,q0)
     
     # 1ière méthode : résolution de systèmes d'éq non-linéaires 
-    q=robot.no_linear(q0)
-    robot.calculPos(q)
-    robot.traceRobot("Non_Linéaire")
+    # q=robot.no_linear(q0)
+    # robot.calculPos(q)
+    # robot.traceRobot("Non_Linéaire")
     # 2ième méthode : Résolution analytique du MGI 2R plan :renvoie alphi_i et beta_i
     q=robot.MGI_analytique()
     # robot.calculPos(q)
     # robot.traceRobot("MGI_Analytique")
 
     # Pygame 
-    robot.runPygame3(q)
+    # robot.runPygame3(q)
+    robot.run_simulation()
 
 if __name__=="__main__":
     main()
