@@ -18,13 +18,13 @@ class Robot():
 
         # Variables par défaut
         self.L1 = L1
-        self.L2=L2
-        self.Rb=Rb
-        self.Re=Re
-        self.dimensionPlateau=dimensionPlateau
-        self.pos_eff=pos_eff
-        self.q0= q0
-        self.theta=theta
+        self.L2 = L2
+        self.Rb = Rb
+        self.Re = Re
+        self.dimensionPlateau = dimensionPlateau
+        self.pos_eff = pos_eff
+        self.q0 = q0
+        self.theta = theta
         self.trajectory=[]
 
         # Variables de position du robot
@@ -37,8 +37,8 @@ class Robot():
         # Variables Pygame
         self.name=name
         pygame.init()
-        self.width=500
-        self.height=500
+        self.width=800
+        self.height=800
         self.window = pygame.display.set_mode((self.width,self.height))
         self.window.fill((232,220,202))
         pygame.display.set_caption(f"Simulation of {self.name} robot")
@@ -672,11 +672,13 @@ class Robot():
 
     def draw_robot(self):
         """Dessine le robot sur la fenêtre pygame"""
-        self.window.fill((232, 220, 202))  # fond
-        font = pygame.font.SysFont("Arial", 30)
+        self.window.fill((255, 255, 255))  # fond
+        font = pygame.font.SysFont("Arial", 20)
         NOIR = (0, 0, 0)
-        texte_angle = font.render(f"Angle: {self.theta:.1f}°", True, NOIR)
+        texte_angle = font.render(f"Angle effecteur: {self.theta:.1f}°", True, NOIR)
+        cercle = font.render(f"Touche P : Cercle", True, NOIR)
         self.window.blit(texte_angle, (10, 10))  # Affichage en haut à gauche
+        self.window.blit(cercle, (10, 40))
 
 
         # Dessiner les bras
