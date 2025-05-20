@@ -1,36 +1,56 @@
-import pygame
 import numpy as np
+from numpy import pi , cos , sin
+import matplotlib.pyplot as plt
 import random
-from math import cos, sin, pi
+import pygame
+import copy
+
+"""Created on Thue 10 April
+@auhors=  Judicaël CORPET & Dan CALAMIA
+
+while 3RRR Project
+
+"""
 
 class Robot():
-    def __init__(self, L1, L2, Rb, Re, dimensionPlateau, pos_eff, q0, name="3RRR"):
-        # Initialisation des paramètres
-        self.L1 = L1
-        self.L2 = L2
-        self.Rb = Rb
-        self.Re = Re
-        self.dimensionPlateau = dimensionPlateau
-        self.pos_eff = pos_eff
-        self.q0 = q0
 
-        # Variables de Pygame
-        self.name = name
+    def __init__(self, L1, L2, Rb, Re ,dimensionPlateau ,pos_eff, q0 ,theta=0, name="3RRR"):
+
+        # Variables par défaut
+        self.L1 = L1
+        self.L2=L2
+        self.Rb=Rb
+        self.Re=Re
+        self.dimensionPlateau=dimensionPlateau
+        self.pos_eff=pos_eff
+        self.q0= q0
+        self.theta=theta
+        self.trajectory=[]
+
+        # Variables de position du robot
+        self.P10, self.P11, self.P12,self.P20,self.P21, self.P22, self.P30, self.P31,self.P32=[],[],[],[],[],[],[],[],[] # pas obligé de les déclaré dans init en réalité
+        #Calcule les coordonnées des 3 points fixes Oi sur un cercle de rayon Rb, espacés de 120°:
+        self.Oi_list = [(Rb * np.cos(2 * i * np.pi / 3), Rb * np.sin(2 * i * np.pi / 3)) for i in range(3)]
+        #Coordonnées locales des points Bi de la plateforme mobile, aussi espacés de 120°:
+        self.Bi_local = [(Re * np.cos(2 * i * np.pi / 3), Re * np.sin(2 * i * np.pi / 3)) for i in range(3)]
+
+        # Variables Pygame
+        self.name=name
         pygame.init()
-        self.width = 800
-        self.height = 800
-        self.window = pygame.display.set_mode((self.width, self.height))
-        self.window.fill((232, 220, 202))
-        pygame.display.set_caption(f"Simulation of {self.name} robot")
-        self.clock = pygame.time.Clock()
-        self.FPS = 60
+        self.width=700
+        self.height=700
+        self.window = pygame.display.set_mode((self.width,self.height))
+        self.window.fill((232,220,202))
+        pygame.display.set_caption(f"Simulation {self.name} robot")
+        self.clock=pygame.time.Clock()
+        self.FPS=60
 
         # Mise à l'échelle pour pygame
-        self.scale = self.width / self.dimensionPlateau
-        print(self.scale)
-
-    def calculPos(self, q):
-        # Fonction pour calculer la position des points P10, P11, etc. sur les bras
+        self.scale= self.width/self.dimensionPlateau
+        # print(self.scale)
+    
+ 
+    def calculPos(self,q):
         alpha1 = q[0]
         beta1 = q[1]
         alpha2 = q[2]
@@ -44,132 +64,126 @@ class Robot():
         Rot2 = np.array([[cos(4 * pi / 3), -sin(4 * pi / 3)],
                         [sin(4 * pi / 3), cos(4 * pi / 3)]])
 
-        # Calcul des points
-        self.P10 = np.array([0, -self.Rb, 1])  # P10 en coordonnées homogènes
+        # Vecteurs
+        self.P10 = np.array([0, -self.Rb])
+
+        T1 = np.array([
+            [1, 0, 0],
+            [0, 1, -self.Rb],
+            [0, 0, 1]
+        ])
 
         # --- P11 ---
-        P11_vec = np.array([self.L1 * np.cos(alpha1), self.L1 * np.sin(alpha1), 1])
-        self.P11 = P11_vec
+        P11_vec = np.array([
+            self.L1 * np.cos(alpha1),
+            self.L1 * np.sin(alpha1),
+            1
+        ])
+        self.P11 = T1 @ P11_vec
 
         # --- P12 ---
-        P12_vec = np.array([self.L1 * np.cos(alpha1) + self.L2 * np.cos(alpha1 + beta1),
-                            self.L1 * np.sin(alpha1) + self.L2 * np.sin(alpha1 + beta1), 1])
-        self.P12 = P12_vec
+        P12_vec = np.array([
+            self.L1 * np.cos(alpha1) + self.L2 * np.cos(alpha1 + beta1),
+            self.L1 * np.sin(alpha1) + self.L2 * np.sin(alpha1 + beta1),
+            1
+        ])
+        self.P12 = T1 @ P12_vec
 
         # --- P20 ---
-        self.P20 = np.array([self.Rb * np.sqrt(3) / 2, self.Rb / 2, 1])  # P20 en coordonnées homogènes
+        self.P20 = np.array([
+            self.Rb * np.sqrt(3) / 2,
+            self.Rb / 2
+        ])
+
+        # --- Matrice homogène pour P21 et P22 ---
+        T2 = np.block([
+            [Rot1, self.P20.reshape(2, 1)],
+            [np.zeros((1, 2)), np.array([[1]])]
+        ])
 
         # --- P21 ---
-        P21_vec = np.array([self.L1 * np.cos(alpha2), self.L1 * np.sin(alpha2), 1])
-        self.P21 = P21_vec
+        P21_vec = np.array([
+            self.L1 * np.cos(alpha2),
+            self.L1 * np.sin(alpha2),
+            1
+        ])
+        self.P21 = T2 @ P21_vec
 
         # --- P22 ---
-        P22_vec = np.array([self.L1 * np.cos(alpha2) + self.L2 * np.cos(alpha2 + beta2),
-                            self.L1 * np.sin(alpha2) + self.L2 * np.sin(alpha2 + beta2), 1])
-        self.P22 = P22_vec
+        P22_vec = np.array([
+            self.L1 * np.cos(alpha2) + self.L2 * np.cos(alpha2 + beta2),
+            self.L1 * np.sin(alpha2) + self.L2 * np.sin(alpha2 + beta2),
+            1
+        ])
+        self.P22 = T2 @ P22_vec
 
         # --- P30 ---
-        self.P30 = np.array([-self.Rb * np.sqrt(3) / 2, self.Rb / 2, 1])  # P30 en coordonnées homogènes
+        self.P30 = np.array([
+            -self.Rb * np.sqrt(3) / 2,
+            self.Rb / 2
+        ])
+
+        # --- Matrice homogène pour P31 et P32 ---
+        T3 = np.block([
+            [Rot2,self.P30.reshape(2, 1)],
+            [np.zeros((1, 2)), np.array([[1]])]
+        ])
 
         # --- P31 ---
-        P31_vec = np.array([self.L1 * np.cos(alpha3), self.L1 * np.sin(alpha3), 1])
-        self.P31 = P31_vec
+        P31_vec = np.array([
+            self.L1 * np.cos(alpha3),
+            self.L1 * np.sin(alpha3),
+            1
+        ])
+        self.P31 = T3 @ P31_vec
 
         # --- P32 ---
-        P32_vec = np.array([self.L1 * np.cos(alpha3) + self.L2 * np.cos(alpha3 + beta3),
-                            self.L1 * np.sin(alpha3) + self.L2 * np.sin(alpha3 + beta3), 1])
-        self.P32 = P32_vec
+        P32_vec = np.array([
+            self.L1 * np.cos(alpha3) + self.L2 * np.cos(alpha3 + beta3),
+            self.L1 * np.sin(alpha3) + self.L2 * np.sin(alpha3 + beta3),
+            1
+        ])
+        self.P32 = T3 @ P32_vec
 
-        # Décalage pour centrer dans la fenêtre Pygame
-        center_x = self.width / 2
-        center_y = self.height / 2
-
-        # Ajout du décalage homogène (en ajoutant la composante z = 1 pour les coordonnées homogènes)
-        self.P10[:2] += np.array([center_x, center_y])
-        self.P11[:2] += np.array([center_x, center_y])
-        self.P12[:2] += np.array([center_x, center_y])
-        self.P20[:2] += np.array([center_x, center_y])
-        self.P21[:2] += np.array([center_x, center_y])
-        self.P22[:2] += np.array([center_x, center_y])
-        self.P30[:2] += np.array([center_x, center_y])
-        self.P31[:2] += np.array([center_x, center_y])
-        self.P32[:2] += np.array([center_x, center_y])
-
-
-
-
-
-    def move_effector(self, dx, dy):
-        # Déplacer l'effecteur avec les touches clavier
-        self.pos_eff[0] += dx
-        self.pos_eff[1] += dy
-
-
-
-    def traceRobot(self):
-        # Affichage du robot avec Pygame
-        self.window.fill((232, 220, 202))  # Réinitialiser la fenêtre
-
+    def traceRobot(self, method= ""):
+        # Affichage du robot
+        plt.figure()
+        
         # Tracer bras 1
         color1 = (random.random(), random.random(), random.random())
-        pygame.draw.lines(self.window, color1, False, [(self.P10[0] * self.scale, self.P10[1] * self.scale),
-                                                    (self.P11[0] * self.scale, self.P11[1] * self.scale),
-                                                    (self.P12[0] * self.scale, self.P12[1] * self.scale)], 2)
+        plt.plot([self.P10[0], self.P11[0], self.P12[0]], [self.P10[1], self.P11[1], self.P12[1]], color = color1 ,label="Bras 1")
 
         # Tracer bras 2
         color2 = (random.random(), random.random(), random.random())
-        pygame.draw.lines(self.window, color2, False, [(self.P20[0] * self.scale, self.P20[1] * self.scale),
-                                                    (self.P21[0] * self.scale, self.P21[1] * self.scale),
-                                                    (self.P22[0] * self.scale, self.P22[1] * self.scale)], 2)
+        plt.plot([self.P20[0], self.P21[0], self.P22[0]], [self.P20[1], self.P21[1], self.P22[1]], color = color2, label="Bras 2")
 
         # Tracer bras 3
         color3 = (random.random(), random.random(), random.random())
-        pygame.draw.lines(self.window, color3, False, [(self.P30[0] * self.scale, self.P30[1] * self.scale),
-                                                    (self.P31[0] * self.scale, self.P31[1] * self.scale),
-                                                    (self.P32[0] * self.scale, self.P32[1] * self.scale)], 2)
+        plt.plot([self.P30[0], self.P31[0],self. P32[0]], [self.P30[1], self.P31[1], self.P32[1]], color = color3, label="Bras 3")
 
         # Tracer effecteur (triangle)
-        pygame.draw.polygon(self.window, (0, 0, 0),
-                            [(self.P12[0] * self.scale, self.P12[1] * self.scale),
-                            (self.P22[0] * self.scale, self.P22[1] * self.scale),
-                            (self.P32[0] * self.scale, self.P32[1] * self.scale)], 2)
+        plt.plot([self.P12[0], self.P22[0], self.P32[0], self.P12[0]],
+                [self.P12[1], self.P22[1], self.P32[1], self.P12[1]],
+                linewidth=2, label="Effecteur")
 
-        # Mettre à jour l'affichage
-        pygame.display.update()
+        # Tracer du centre de gravité de l'effecteur (qui sera la pointe qui écrit), et qui permettra plus facilement de vérifier si les coordonnées envoyées sont correctes
+        # Calcul du barycentre du triangle de l'effecteur
+        Gx = (self.P12[0] + self.P22[0] + self.P32[0]) / 3
+        Gy = (self.P12[1] + self.P22[1] + self.P32[1]) / 3
 
-    def runPygame(self):
-        # Boucle principale de Pygame
-        running = True
-        while running:
-            self.window.fill((232, 220, 202))  # Réinitialiser la fenêtre
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
+        # Tracer le barycentre
+        plt.plot(Gx, Gy, 'ro', label='Pointe effecteur')  # 'ro' = point rouge
 
-            # Gestion des entrées clavier
-            keys = pygame.key.get_pressed()
-            if keys[pygame.K_UP]:
-                self.move_effector(0, -0.01)  # Déplacer l'effecteur vers le haut
-            if keys[pygame.K_DOWN]:
-                self.move_effector(0, 0.01)  # Déplacer l'effecteur vers le bas
-            if keys[pygame.K_LEFT]:
-                self.move_effector(-0.01, 0)  # Déplacer l'effecteur vers la gauche
-            if keys[pygame.K_RIGHT]:
-                self.move_effector(0.01, 0)  # Déplacer l'effecteur vers la droite
+        # Mise à l’échelle
+        plt.axis("equal")
+        plt.axis("square")
 
-            # Recalculer la position du robot
-            q = self.MGI_analytique()  # Résolution analytique des angles
-            self.calculPos(q)
+        # Afficher les légendes (optionnel)
+        plt.legend()
+        plt.grid(True)
+        plt.title(f"Visualisation des bras + effecteur (méthode: {method})") 
 
-            # Tracer le robot
-            self.traceRobot()
-
-            # Mettre à jour l'affichage
-            pygame.display.update()
-            self.clock.tick(self.FPS)  # Limiter la vitesse de l'animation
-
-        pygame.quit()
-
+        plt.show()
         
     def MGI_analytique(self):
         # Variables globales
@@ -223,22 +237,335 @@ class Robot():
         
         # return np.array(q)
 
+    def solve_eq_NL(self,q):
+        if self.check_extesnsion(q)== True:
+            print(" Il y a une singularité: extension")
+        # Variables globales
+        # print(q[1],q[3],q[5])
+        # Extraction des valeurs de alpha et beta pour chaque bras
+        alpha = [q[0], q[2], q[4]]
+        beta = [q[1], q[3], q[5]]
 
-# Code principal pour tester l'animation
-def main():
-    L1 = 0.10
-    L2 = 0.10
-    Rb = 0.1322594
-    Re = 0.07
-    dimensionPlateau = 0.50
-    pos_eff = [0.1, -0.02, 0.0]
-    q0 = np.array([0, pi / 2, 0, pi / 2, 0, pi / 2])
+        # Angles R_i par rapport à R_0
+        ang1 = [0, 2 * np.pi / 3, 4 * np.pi / 3]
 
-    robot = Robot(L1, L2, Rb, Re, dimensionPlateau, pos_eff, q0)
+        # Angles des positions O_i et E_i
+        ang2 = [-np.pi / 2, np.pi / 6, 5 * np.pi / 6]
 
-    # Exécuter l'animation Pygame
-    robot.runPygame()
+        # Matrice de rotation et translation de l'effecteur
+        RotEff = np.array([[np.cos(self.pos_eff[2]), -np.sin(self.pos_eff[2])], [np.sin(self.pos_eff[2]), np.cos(self.pos_eff[2])]])
+        Transl = np.array([self.pos_eff[0], self.pos_eff[1]])
+        THEff = np.block([[RotEff, Transl.reshape(-1, 1)], [0, 0, 1]])
+
+        F = []
+
+        for i in range(3):
+            # Position des points E_i dans R_E
+            PEi_E = np.array([self.Re * np.cos(ang2[i]),self.Re * np.sin(ang2[i]), 1])
+
+            # Position des trois points E_i de l'effecteur dans R_0
+            PEi_0 = THEff @ PEi_E
+
+            # Matrice de rotation et translation de R_i par rapport à R_0
+            Rot = np.array([[np.cos(ang1[i]), -np.sin(ang1[i])], [np.sin(ang1[i]), np.cos(ang1[i])]])
+            THRi_0 = np.block([[Rot, np.array([self.Rb * np.cos(ang2[i]), self.Rb * np.sin(ang2[i])]).reshape(-1, 1)], [0, 0, 1]])
+
+            # Points B_i, extrémités des bras en fonction de alpha_i et beta_i dans R_0
+            PBi = THRi_0 @ np.array([self.L1 * np.cos(alpha[i]) + self.L2 * np.cos(alpha[i] + beta[i]),
+                                    self.L1 * np.sin(alpha[i]) + self.L2 * np.sin(alpha[i] + beta[i]),
+                                    1])
+
+            # Les contraintes expriment que B_i doit être confondu avec E_i
+            # F(2*i-1) et F(2*i) doivent être égales à zéro (les coordonnées x et y)
+            F.append(PBi[0] - PEi_0[0])  # x
+            F.append(PBi[1] - PEi_0[1])  # y
+
+        return np.array(F)
+
+    def no_linear(self,q0):
+        # 1ère méthode: Résoudre le système d'équations non linéaires
+        from scipy.optimize import fsolve
+        q = fsolve(lambda q: self.solve_eq_NL(q), q0)
+        return q
+    
+    def check_extesnsion(self,q):
+        result=False
+        if q[1]==0 or q[3]==0 or q[5]==0:
+            result=True
+        return result
+    
+    def is_valid_position(self, x, y, theta=None):
+        if theta is None:
+            theta = self.theta
+
+        # Points fixes Oi
+        Oi_list = [(self.P10[0], self.P10[1]), (self.P20[0], self.P20[1]), (self.P30[0], self.P30[1])]
+        
+        # Points locaux Bi
+        Bi_local = [
+            (self.P12[0] - self.pos_eff[0], self.P12[1] - self.pos_eff[1]),
+            (self.P22[0] - self.pos_eff[0], self.P22[1] - self.pos_eff[1]),
+            (self.P32[0] - self.pos_eff[0], self.P32[1] - self.pos_eff[1]),
+        ]
+
+        # Rotation + translation des Bi vers leur nouvelle position (x, y, theta)
+        Bi_global = []
+        for p in Bi_local:
+            px_rot, py_rot = self.rotate(p, theta)
+            Bi_global.append((x + px_rot, y + py_rot))
+        seuil_securite=0.005
+        seuil = self.L1 + self.L2 - seuil_securite
+        for Oi, Bi in zip(Oi_list, Bi_global):
+            dx = Bi[0] - Oi[0]
+            dy = Bi[1] - Oi[1]
+            d = np.hypot(dx, dy)
+            if d > seuil:
+                return False
+
+        return True
+
+    def rotate(self, point, angle):
+        #Fonction rotation : applique une rotation 2D autour de l'origine à un point donné
+
+        x, y = point
+        return (x * np.cos(angle) - y * np.sin(angle),
+                x * np.sin(angle) + y * np.cos(angle))
+
+    def calcul_gamma_d(self,Ai,Bi):
+        """
+        Calcule gamma_i et di à partir des points Ai, Bi et E, en tenant compte de l orientation θE de l effecteur.
+        
+        - Ai, Bi, E : tuples (x, y)
+        - theta_E : orientation de l effecteur en radians
+        """
+        E= [self.pos_eff[0], self.pos_eff[1]] # pos centre effecteur
+        
+        
+  
+        E = np.array(E)
+
+        vec_AiBi = Bi - Ai
+        vec_BiE = E - Bi
+        t_E = np.dot(E - Ai, vec_AiBi) / np.dot(vec_AiBi, vec_AiBi)
+        H_E = Ai + t_E * vec_AiBi
+        d_i = np.linalg.norm(E-H_E)
+
+        # Angle entre AiBi et l’axe x (global), puis exprimé dans le repère de l’effecteur
+        gamma_i = np.arctan2(vec_AiBi[1], vec_AiBi[0]) - self.theta
+
+        # Distance orientée entre E et la droite AiBi 
+        # d_i = (vec_AiBi[0] * vec_BiE[1] - vec_AiBi[1] * vec_BiE[0]) / np.linalg.norm(vec_AiBi)
+    
+
+        return gamma_i, d_i
+
+    def calcul_matrices_AB(self):
+        """
+        Calcule les matrices A et B pour un robot parallèle 3RRR.
+        
+        Paramètres :
+        - gamma : liste ou array des angles gammai [gammai1, gammai2, gammai3] en radians
+        - d : liste ou array des bras de levier di [d1, d2, d3]
+        - e : liste ou array des bras de levier ei [e1, e2, e3]
+        
+        Retourne :
+        - A : matrice 3x3
+        - B : matrice 3x3
+    
+        """
+        P11 = np.array([self.P11[0],self.P11[1]]) # car on veut que x et y , lors des calculs de positions on a parfois des vecteurs de taille 3 
+        P12 = np.array([self.P12[0],self.P12[1]])
+        P21 = np.array([self.P21[0],self.P21[1]])
+        P22 = np.array([self.P22[0],self.P22[1]])
+        P31 = np.array([self.P31[0],self.P31[1]])
+        P32 = np.array([self.P32[0],self.P32[1]])
+        
+        gamma1, d1 = self.calcul_gamma_d(P11,P12)
+
+        gamma2, d2 = self.calcul_gamma_d(P21,P22)
+   
+        gamma3, d3 = self.calcul_gamma_d(P31,P32)
 
 
-if __name__ == "__main__":
-    main()
+        gamma = np.array([gamma1,gamma2,gamma3])
+        d = np.array([d1,d2,d3])
+        e1= np.linalg.norm(P12-P11)
+        e2= np.linalg.norm(P22-P21)
+        e3= np.linalg.norm(P32-P31)
+        e= np.array([e1,e2,e3])
+        print(f"d: {d}")
+        print(f"e: {e}")
+        A = np.array([
+            [np.cos(gamma[0]), np.sin(gamma[0]), d[0]],
+            [np.cos(gamma[1]), np.sin(gamma[1]), d[1]],
+            [np.cos(gamma[2]), np.sin(gamma[2]), d[2]]
+        ])
+        
+        B = np.diag(e)  # matrice diagonale avec e1, e2, e3 sur la diagonale
+        det_A = np.linalg.det(A)
+        det_B = np.linalg.det(B)
+        # print(det_A)
+        # print(det_B)
+        tolerance = 0.01
+        if -tolerance < det_A < 0 + tolerance and self.est_modulo_pi(gamma) :
+            print(" 1ere Singularite parallele (det(A) = 0 et gamma = Cte(pi)) ")
+        elif -tolerance < det_A < 0 + tolerance:
+            print(" 2eme Singularite parallele (det(A) = 0) ")
+        elif -0.001 < det_B < 0 + 0.001 :
+            # print(" Singularite série (det(B)) = 0) ")
+            pass
+
+    def est_modulo_pi(self,gammas, tol=1e-6):
+        """
+        Vérifie si tous les angles de la liste `gammas` sont égaux modulo π (±π).
+        
+        Paramètres :
+        - gammas : liste ou array d'angles en radians
+        - tol : tolérance pour comparaison numérique
+        
+        Retourne : True si tous les γi ≡ γj mod π
+        """
+        gamma0 = gammas[0] % np.pi
+        return all(np.abs((g % np.pi) - gamma0) < tol or
+                np.abs((g % np.pi) - gamma0 - np.pi) < tol for g in gammas[1:])
+
+    def to_screen(self, pos):
+        """Convertit les coordonnées réelles en pixels pour Pygame (origine au centre)"""
+        x = int(self.width / 2 + pos[0] * self.scale)
+        y = int(self.height / 2 - pos[1] * self.scale)
+        return (x, y)
+
+    def draw_robot(self):
+        """Dessine le robot sur la fenêtre pygame"""
+        self.window.fill((232, 220, 202))  # fond
+        font = pygame.font.SysFont("Arial", 30)
+        NOIR = (0, 0, 0)
+        texte_angle = font.render(f"Angle: {self.theta:.1f}°", True, NOIR)
+        self.window.blit(texte_angle, (10, 10))  # Affichage en haut à gauche
+
+        # Dessiner les bras
+        pygame.draw.circle(self.window,(0,255,255),self.to_screen(self.P32),10,3)
+        pygame.draw.lines(self.window, (255, 0, 0), False, [
+            self.to_screen(self.P10[:2]),
+            self.to_screen(self.P11[:2]),
+            self.to_screen(self.P12[:2])
+        ], 4)
+
+        pygame.draw.lines(self.window, (0, 255, 0), False, [
+            self.to_screen(self.P20[:2]),
+            self.to_screen(self.P21[:2]),
+            self.to_screen(self.P22[:2])
+        ], 4)
+
+        pygame.draw.lines(self.window, (0, 0, 255), False, [
+            self.to_screen(self.P30[:2]),
+            self.to_screen(self.P31[:2]),
+            self.to_screen(self.P32[:2])
+        ], 4)
+
+        # Dessiner l'effecteur (triangle)
+        pygame.draw.polygon(self.window, (150, 100, 255), [
+            self.to_screen(self.P12[:2]),
+            self.to_screen(self.P22[:2]),
+            self.to_screen(self.P32[:2])
+        ], 2)
+
+        # Dessiner le barycentre (pointe)
+        Gx = (self.P12[0] + self.P22[0] + self.P32[0]) / 3
+        Gy = (self.P12[1] + self.P22[1] + self.P32[1]) / 3
+        pygame.draw.circle(self.window, (255, 0, 0), self.to_screen((Gx, Gy)), 5)
+
+        # Tracer la trajectoire
+        if len(self.trajectory) > 1:
+            pygame.draw.lines(self.window, (0, 0, 255), False, self.trajectory, 2)
+
+        pygame.display.update()
+
+    def run_simulation(self):
+        """Lance une animation simple avec des positions successives de l’effecteur"""
+        running = True
+        t = 0
+        self.mode = "manual"  # autres valeurs possibles: "circle", "trefoil"
+        x, y = self.pos_eff[0], self.pos_eff[1]
+
+        while running:
+            self.clock.tick(self.FPS)
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+
+            keys = pygame.key.get_pressed()
+            
+            # Mode sélectionné par touche
+            if keys[pygame.K_o]:
+                self.mode = "circle"
+            if keys[pygame.K_p]:
+                self.mode = "trefoil"
+            if keys[pygame.K_m]:
+                self.mode = "manual"
+       
+            if self.mode == "manual":
+                if keys[pygame.K_UP]:
+                    if self.is_valid_position(x,y+0.01):
+                        y += 0.001
+                    else:
+                        print("position inattéignable")
+                if keys[pygame.K_DOWN]:
+                    if self.is_valid_position(x,y-0.01):
+                        y -= 0.001
+                    else:
+                        print("position inattéignable")
+                if keys[pygame.K_LEFT]:
+                    if self.is_valid_position(x-0.01,y):
+                        x -= 0.001
+                    else:
+                        print("position inattéignable")
+
+                if keys[pygame.K_RIGHT]:
+                    if self.is_valid_position(x+0.01,y):
+                        x += 0.001
+                    else:
+                        print("position inattéignable")
+
+                if keys[pygame.K_l]:
+                    theta_temp = self.theta + 0.01
+                    if self.is_valid_position(x, y, theta_temp):
+                        self.theta = theta_temp
+                    else:
+                        print("position inattéignable")
+
+                if keys[pygame.K_k]:
+                    theta_temp = self.theta - 0.01
+                    if self.is_valid_position(x, y, theta_temp):
+                        self.theta = theta_temp
+                    else:
+                        print("position inattéignable")
+
+
+            elif self.mode == "circle":
+                if self.is_valid_position(0.1 * np.cos(t),0.1 * np.sin(t)):
+                    x = 0.1 * np.cos(t)
+                    y = 0.1 * np.sin(t)
+                    t += 0.01
+
+            elif self.mode == "trefoil":
+                K= 0.02 # gain
+                r = K * (1 + np.cos(4 * t) + 2 * (np.sin(4 * t))**2)
+                if self.is_valid_position(r * np.cos(t),r * np.sin(t)):
+                    x = r * np.cos(t)
+                    y = r * np.sin(t)
+                    t += 0.01
+
+           
+            
+            self.pos_eff = np.array([x, y, self.theta])
+            pos = (self.pos_eff[0],self.pos_eff[1])
+            self.trajectory.append(self.to_screen(pos))
+            q = self.MGI_analytique()
+            self.calculPos(q)
+            self.calcul_matrices_AB()
+            self.draw_robot()
+
+        pygame.quit()
+ 

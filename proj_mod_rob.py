@@ -6,7 +6,7 @@ import pygame
 import copy
 
 """Created on Thue 10 April
-@auhors= Dan CALAMIA & Judicaël CORPET
+@auhors=  Judicaël CORPET & Dan CALAMIA
 
 while 3RRR Project
 
@@ -49,18 +49,7 @@ class Robot():
         self.scale= self.width/self.dimensionPlateau
         # print(self.scale)
     
-    def get_L1(self):
-        return self.L1
-    
-    def get_L2(self):
-        return self.L2
-    
-    def get_Rb(self):
-        return self.Rb
-    
-    def get_Re(self):
-        return self.Re
-
+ 
     def calculPos(self,q):
         alpha1 = q[0]
         beta1 = q[1]
@@ -304,26 +293,37 @@ class Robot():
         if q[1]==0 or q[3]==0 or q[5]==0:
             result=True
         return result
+    
+    def is_valid_position(self, x, y, theta=None):
+        if theta is None:
+            theta = self.theta
 
-    def is_valid_position(self, x, y):
-        # Fonction pour vérifier que (x, y) est atteignable
+        # Points fixes Oi
+        Oi_list = [(self.P10[0], self.P10[1]), (self.P20[0], self.P20[1]), (self.P30[0], self.P30[1])]
+        
+        # Points locaux Bi
+        Bi_local = [
+            (self.P12[0] - self.pos_eff[0], self.P12[1] - self.pos_eff[1]),
+            (self.P22[0] - self.pos_eff[0], self.P22[1] - self.pos_eff[1]),
+            (self.P32[0] - self.pos_eff[0], self.P32[1] - self.pos_eff[1]),
+        ]
+
+        # Rotation + translation des Bi vers leur nouvelle position (x, y, theta)
         Bi_global = []
-        for p in self.Bi_local:
-            px_rot, py_rot = self.rotate(p, self.theta)  # Une seule rotation par point
+        for p in Bi_local:
+            px_rot, py_rot = self.rotate(p, theta)
             Bi_global.append((x + px_rot, y + py_rot))
-
-        # Calcul de la distance entre chaque Oi et Bi
-        for Oi, Bi in zip(self.Oi_list, Bi_global):
+        seuil_securite=0.005
+        seuil = self.L1 + self.L2 - seuil_securite
+        for Oi, Bi in zip(Oi_list, Bi_global):
             dx = Bi[0] - Oi[0]
             dy = Bi[1] - Oi[1]
             d = np.hypot(dx, dy)
-            print(f"Distance Bi-Oi = {d:.3f} (max = {self.L1 + self.L2})")
-            if d > self.L1 + self.L2:
-                return False  # Position non atteignable
+            if d > seuil:
+                return False
 
-        return True  # Position atteignable
+        return True
 
-    
     def rotate(self, point, angle):
         #Fonction rotation : applique une rotation 2D autour de l'origine à un point donné
 
@@ -338,21 +338,24 @@ class Robot():
         - Ai, Bi, E : tuples (x, y)
         - theta_E : orientation de l effecteur en radians
         """
-        E= [self.pos_eff[0], self.pos_eff[1]]
+        E= [self.pos_eff[0], self.pos_eff[1]] # pos centre effecteur
         
         
   
         E = np.array(E)
 
-        vec_BiAi = Ai - Bi
+        vec_AiBi = Bi - Ai
         vec_BiE = E - Bi
+        t_E = np.dot(E - Ai, vec_AiBi) / np.dot(vec_AiBi, vec_AiBi)
+        H_E = Ai + t_E * vec_AiBi
+        d_i = np.linalg.norm(E-H_E)
 
+        # Angle entre AiBi et l’axe x (global), puis exprimé dans le repère de l’effecteur
+        gamma_i = np.arctan2(vec_AiBi[1], vec_AiBi[0]) - self.theta
 
-        # Angle entre BiAi et l’axe x (global), puis exprimé dans le repère de l’effecteur
-        gamma_i = np.arctan2(vec_BiAi[1], vec_BiAi[0]) - self.theta
-
-        # Distance orientée entre E et la droite AiBi (via produit mixte / déterminant)
-        d_i = (vec_BiAi[0] * vec_BiE[1] - vec_BiAi[1] * vec_BiE[0]) / np.linalg.norm(vec_BiAi)
+        # Distance orientée entre E et la droite AiBi 
+        # d_i = (vec_AiBi[0] * vec_BiE[1] - vec_AiBi[1] * vec_BiE[0]) / np.linalg.norm(vec_AiBi)
+    
 
         return gamma_i, d_i
 
@@ -378,8 +381,11 @@ class Robot():
         P32 = np.array([self.P32[0],self.P32[1]])
         
         gamma1, d1 = self.calcul_gamma_d(P11,P12)
+
         gamma2, d2 = self.calcul_gamma_d(P21,P22)
+   
         gamma3, d3 = self.calcul_gamma_d(P31,P32)
+
 
         gamma = np.array([gamma1,gamma2,gamma3])
         d = np.array([d1,d2,d3])
@@ -387,6 +393,8 @@ class Robot():
         e2= np.linalg.norm(P22-P21)
         e3= np.linalg.norm(P32-P31)
         e= np.array([e1,e2,e3])
+        print(f"d: {d}")
+        print(f"e: {e}")
         A = np.array([
             [np.cos(gamma[0]), np.sin(gamma[0]), d[0]],
             [np.cos(gamma[1]), np.sin(gamma[1]), d[1]],
@@ -436,6 +444,7 @@ class Robot():
         self.window.blit(texte_angle, (10, 10))  # Affichage en haut à gauche
 
         # Dessiner les bras
+        pygame.draw.circle(self.window,(0,255,255),self.to_screen(self.P32),10,3)
         pygame.draw.lines(self.window, (255, 0, 0), False, [
             self.to_screen(self.P10[:2]),
             self.to_screen(self.P11[:2]),
@@ -520,16 +529,19 @@ class Robot():
                         print("position inattéignable")
 
                 if keys[pygame.K_l]:
-                    if self.is_valid_position(x+0.01,y):
-                        self.theta += 0.01
+                    theta_temp = self.theta + 0.01
+                    if self.is_valid_position(x, y, theta_temp):
+                        self.theta = theta_temp
                     else:
                         print("position inattéignable")
 
                 if keys[pygame.K_k]:
-                    if self.is_valid_position(x+0.01,y):
-                        self.theta -= 0.01
+                    theta_temp = self.theta - 0.01
+                    if self.is_valid_position(x, y, theta_temp):
+                        self.theta = theta_temp
                     else:
                         print("position inattéignable")
+
 
             elif self.mode == "circle":
                 if self.is_valid_position(0.1 * np.cos(t),0.1 * np.sin(t)):
@@ -547,7 +559,7 @@ class Robot():
 
            
             
-            self.pos_eff = np.array([x, y, 0])
+            self.pos_eff = np.array([x, y, self.theta])
             pos = (self.pos_eff[0],self.pos_eff[1])
             self.trajectory.append(self.to_screen(pos))
             q = self.MGI_analytique()
