@@ -3,6 +3,7 @@ from numpy import pi , cos , sin
 import matplotlib.pyplot as plt
 import random
 import pygame
+import math
 import copy
 
 """Created on Thue 10 April
@@ -60,7 +61,7 @@ class Robot():
         return self.Rb
     
     def get_Re(self):
-        return self.LRe
+        return self.Re
 
     def calculPos(self,q):
         alpha1 = q[0]
@@ -171,7 +172,7 @@ class Robot():
 
         # Tracer bras 3
         color3 = (random.random(), random.random(), random.random())
-        plt.plot([self.P30[0], self.P31[0],self. P32[0]], [self.P30[1], self.P31[1], self.P32[1]], color = color3, label="Bras 3")
+        plt.plot([self.P30[0], self.P31[0],self.P32[0]], [self.P30[1], self.P31[1], self.P32[1]], color = color3, label="Bras 3")
 
         # Tracer effecteur (triangle)
         plt.plot([self.P12[0], self.P22[0], self.P32[0], self.P12[0]],
@@ -196,10 +197,9 @@ class Robot():
         plt.title(f"Visualisation des bras + effecteur (méthode: {method})") 
 
         plt.show()
-        
+    
     def MGI_analytique(self):
         # Variables globales
-        
 
         # Matrice de rotation et translation de l'effecteur
         RotEff = np.array([[np.cos(self.pos_eff[2]), -np.sin(self.pos_eff[2])], [np.sin(self.pos_eff[2]), np.cos(self.pos_eff[2])]])
@@ -250,7 +250,7 @@ class Robot():
         # return np.array(q)
 
     def solve_eq_NL(self,q):
-        if self.check_extesnsion(q)== True:
+        if self.check_extension(q)== True:
             print(" Il y a une singularité: extension")
         # Variables globales
         # print(q[1],q[3],q[5])
@@ -300,7 +300,7 @@ class Robot():
         q = fsolve(lambda q: self.solve_eq_NL(q), q0)
         return q
     
-    def check_extesnsion(self,q):
+    def check_extension(self,q):
         result=False
         if q[1]==0 or q[3]==0 or q[5]==0:
             result=True
@@ -325,6 +325,7 @@ class Robot():
         x, y = point
         return (x * np.cos(angle) - y * np.sin(angle),
                 x * np.sin(angle) + y * np.cos(angle))
+
 
 
     def calcul_gamma_d(self,Ai,Bi):
@@ -421,52 +422,56 @@ class Robot():
         return (x, y)
 
     def draw_robot(self):
-        """Dessine le robot sur la fenêtre pygame"""
-        self.window.fill((255, 255, 255))  # fond
-        font = pygame.font.SysFont("Arial", 20)
-        NOIR = (0, 0, 0)
-        texte_angle = font.render(f"Angle effecteur: {self.theta:.1f}°", True, NOIR)
-        cercle = font.render(f"Touche P : Cercle", True, NOIR)
-        self.window.blit(texte_angle, (10, 10))  # Affichage en haut à gauche
-        self.window.blit(cercle, (10, 40))
+        self.window.fill((232, 220, 202))  # fond beige
 
+        # --- Dessin des bases fixes (Ai) ---
+        for (x, y) in self.Ai_list:
+            x_pg = int(x * self.scale + self.width / 2)
+            y_pg = int(self.height / 2 - y * self.scale)
+            pygame.draw.circle(self.window, (0, 0, 255), (x_pg, y_pg), 5)
 
-        # Dessiner les bras
-        pygame.draw.lines(self.window, (255, 0, 0), False, [
-            self.to_screen(self.P10[:2]),
-            self.to_screen(self.P11[:2]),
-            self.to_screen(self.P12[:2])
-        ], 4)
+        # --- Dessin des bras ---
+        bras_colors = [(255, 0, 0), (0, 128, 0), (0, 0, 0)]  # rouge, vert, noir
+        for i in range(3):
+            # Ai
+            x0, y0 = self.Ai_list[i]
+            # Bi (coude)
+            x1, y1 = getattr(self, f'P1{i}')  # P10, P11, P12
+            # Ci (point d’attache plateforme)
+            x2, y2 = getattr(self, f'P2{i}')  # P20, P21, P22
 
-        pygame.draw.lines(self.window, (0, 255, 0), False, [
-            self.to_screen(self.P20[:2]),
-            self.to_screen(self.P21[:2]),
-            self.to_screen(self.P22[:2])
-        ], 4)
+            A = (x0 * self.scale + self.width / 2, self.height / 2 - y0 * self.scale)
+            B = (x1 * self.scale + self.width / 2, self.height / 2 - y1 * self.scale)
+            C = (x2 * self.scale + self.width / 2, self.height / 2 - y2 * self.scale)
 
-        pygame.draw.lines(self.window, (0, 0, 255), False, [
-            self.to_screen(self.P30[:2]),
-            self.to_screen(self.P31[:2]),
-            self.to_screen(self.P32[:2])
-        ], 4)
+            pygame.draw.line(self.window, bras_colors[0], A, B, 2)
+            pygame.draw.line(self.window, bras_colors[1], B, C, 2)
 
-        # Dessiner l'effecteur (triangle)
-        pygame.draw.polygon(self.window, (150, 100, 255), [
-            self.to_screen(self.P12[:2]),
-            self.to_screen(self.P22[:2]),
-            self.to_screen(self.P32[:2])
-        ], 2)
+        # --- Dessin du triangle effecteur ---
+        x_e, y_e = self.pos_eff
+        theta_e = self.theta
+        l = self.Re  # demi-longueur du triangle effecteur
 
-        # Dessiner le barycentre (pointe)
-        Gx = (self.P12[0] + self.P22[0] + self.P32[0]) / 3
-        Gy = (self.P12[1] + self.P22[1] + self.P32[1]) / 3
-        pygame.draw.circle(self.window, (255, 0, 0), self.to_screen((Gx, Gy)), 5)
+        # Calcul des sommets du triangle (dans le repère cartésien)
+        P1 = (x_e + l * math.cos(theta_e),               y_e + l * math.sin(theta_e))
+        P2 = (x_e + l * math.cos(theta_e + 2 * math.pi / 3), y_e + l * math.sin(theta_e + 2 * math.pi / 3))
+        P3 = (x_e + l * math.cos(theta_e + 4 * math.pi / 3), y_e + l * math.sin(theta_e + 4 * math.pi / 3))
 
-        # Tracer la trajectoire
-        if len(self.trajectory) > 1:
-            pygame.draw.lines(self.window, (0, 0, 255), False, self.trajectory, 2)
+        # Transformation vers le repère Pygame
+        P1_pg = (P1[0] * self.scale + self.width / 2, self.height / 2 - P1[1] * self.scale)
+        P2_pg = (P2[0] * self.scale + self.width / 2, self.height / 2 - P2[1] * self.scale)
+        P3_pg = (P3[0] * self.scale + self.width / 2, self.height / 2 - P3[1] * self.scale)
 
-        pygame.display.update()
+        pygame.draw.polygon(self.window, (0, 0, 0), [P1_pg, P2_pg, P3_pg], 2)
+
+        # --- Affichage texte position et angle ---
+        font = pygame.font.Font(None, 24)
+        angle_deg = math.degrees(self.theta)
+        text = font.render(f"Position: ({x_e:.1f}, {y_e:.1f})  Angle: {angle_deg:.1f}°", True, (0, 0, 0))
+        self.window.blit(text, (10, 10))
+
+        pygame.display.flip()
+
 
     def run_simulation(self):
         """Lance une animation simple avec des positions successives de l’effecteur"""
@@ -495,16 +500,16 @@ class Robot():
             if self.mode == "manual":
                 if keys[pygame.K_UP]:
                     if self.is_valid_position(x,y+0.01):
-                        y += 0.01
+                        y += 0.001
                 if keys[pygame.K_DOWN]:
                     if self.is_valid_position(x,y-0.01):
-                        y -= 0.01
+                        y -= 0.001
                 if keys[pygame.K_LEFT]:
                     if self.is_valid_position(x-0.01,y):
-                        x -= 0.01
+                        x -= 0.001
                 if keys[pygame.K_RIGHT]:
                     if self.is_valid_position(x+0.01,y):
-                        x += 0.01
+                        x += 0.001
                 if keys[pygame.K_l]:
                     if self.is_valid_position(x+0.01,y):
                         self.theta += 0.01
@@ -529,9 +534,12 @@ class Robot():
                
 
             
-            self.pos_eff = np.array([x, y, 0])
+            #self.pos_eff = np.array([x, y, self.theta])
+
+            
             pos = (self.pos_eff[0],self.pos_eff[1])
             self.trajectory.append(self.to_screen(pos))
+            self.pos_eff = (x, y, self.theta)
             q = self.MGI_analytique()
             self.calculPos(q)
             self.calcul_matrices_AB()
