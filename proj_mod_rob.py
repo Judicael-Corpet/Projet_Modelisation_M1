@@ -40,7 +40,7 @@ class Robot():
         self.width=700
         self.height=700
         self.window = pygame.display.set_mode((self.width,self.height))
-        self.window.fill((232,220,202))
+        self.window.fill((255,255,255))
         pygame.display.set_caption(f"Simulation {self.name} robot")
         self.clock=pygame.time.Clock()
         self.FPS=60
@@ -429,7 +429,7 @@ class Robot():
 
     def draw_robot(self):
         """Dessine le robot sur la fenêtre pygame"""
-        self.window.fill((232, 220, 202))  # fond
+        self.window.fill((255, 255, 255))  # fond
         font = pygame.font.SysFont("Arial", 30)
         NOIR = (0, 0, 0)
         texte_angle = font.render(f"Angle: {self.theta:.1f}°", True, NOIR)

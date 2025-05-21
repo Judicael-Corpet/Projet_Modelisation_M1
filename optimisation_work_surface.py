@@ -5,79 +5,23 @@ import pandas as pd
 import seaborn as sns
 
 
-# Paramètres géométriques
-L1 = 100  # longueur OA
-L2 = 150  # longueur AB
-Re = 50   # rayon du plateau effecteur
-Rb = 120  # rayon de la base
-theta_E = 0  # orientation fixe
-
-# Position des moteurs (O1, O2, O3) en triangle équilatéral
-Oi = [(Rb * np.cos(np.radians(a)), Rb * np.sin(np.radians(a))) for a in [270, 30, 150]]
-
-# Coordonnées des points Ei (plateau effecteur tourné de theta_E)
-def compute_Ei(x, y, theta):
-    angles = [270, 30, 150]
-    return [
-        (
-            x + Re * np.cos(np.radians(a + theta)),
-            y + Re * np.sin(np.radians(a + theta))
-        )
-        for a in angles
-    ]
-
-# Vérifie si une solution MGI existe à ce point (x, y)
-def is_reachable(x, y):
-    Ei_points = compute_Ei(x, y, theta_E)
-    for i in range(3):
-        Ox, Oy = Oi[i]
-        Ex, Ey = Ei_points[i]
-        dist = np.hypot(Ex - Ox, Ey - Oy)
-        if dist > (L1 + L2) or dist < abs(L1 - L2):
-            return False  # Triangle impossible
-    return True
-
-# Balayage d'une grille
-resolution = 2  # mm par pixel
-x_range = np.arange(-200, 200, resolution)
-y_range = np.arange(-200, 200, resolution)
-reachable_points = []
-
-for x in x_range:
-    for y in y_range:
-        if is_reachable(x, y):
-            reachable_points.append((x, y))
-
-# Aire = nombre de points × surface par point
-area_mm2 = len(reachable_points) * (resolution**2)
-area_cm2 = area_mm2 / 100.0
-
-print(f"Aire de travail estimée : {area_cm2:.2f} cm²")
-"""
-# Affichage
-rx, ry = zip(*reachable_points)
-plt.figure(figsize=(6, 6))
-plt.scatter(rx, ry, s=1, color='blue')
-plt.title("Aire de travail du robot 3RRR")
-plt.xlabel("x (mm)")
-plt.ylabel("y (mm)")
-plt.axis('equal')
-plt.grid(True)
-plt.show()
-"""
-
 def est_position_valide(x, y, theta, L1, L2, Re, Rb):
-    # Fonction de MGI inverse pour tester si la position (x, y, theta) est réalisable
-    # Avec Re = rayon effecteur, Rb = rayon base (fixe)
-    # Renvoie True si réalisable, False sinon
-    for k in range(3):
-        angle = 2 * np.pi * k / 3
-        Ox = Rb * np.cos(angle)
-        Oy = Rb * np.sin(angle)
-        Ex = x + Re * np.cos(theta + angle)
-        Ey = y + Re * np.sin(theta + angle)
-        d = np.hypot(Ex - Ox, Ey - Oy)
-        if not (abs(L1 - L2) <= d <= L1 + L2):
+    theta_bases = [0, 2*np.pi/3, 4*np.pi/3]
+    theta_plates = [theta, theta + 2*np.pi/3, theta + 4*np.pi/3]
+
+    for i in range(3):
+        Bxi = Rb * np.cos(theta_bases[i])
+        Byi = Rb * np.sin(theta_bases[i])
+
+        Exi = x + Re * np.cos(theta_plates[i])
+        Eyi = y + Re * np.sin(theta_plates[i])
+
+        dx = Exi - Bxi
+        dy = Eyi - Byi
+        distance = np.hypot(dx, dy)
+
+        # Condition de réalisabilité d'un triangle
+        if not (abs(L1 - L2) <= distance <= (L1 + L2)):
             return False
     return True
 
@@ -104,29 +48,30 @@ def trouver_config_maximale():
     resultats = []
     points_max = []
 
-    for L1 in tqdm(range(5, 16)):
-        for L2 in range(5, 16):
-            for cote_E in range(2, 11):
-                aire = calculer_aire_travail(L1, L2, cote_E, Rb, resolution, limite)
-                resultats.append(((L1, L2, cote_E), aire))
-                if aire > max_aire:
-                    max_aire = aire
-                    meilleures_config = (L1, L2, cote_E)
+    for L1 in tqdm(range(80, 121, 10)):
+        for L2 in range(80, 121, 10):
+            for cote_E in range(20, 41, 5):
+                Re = cote_E / np.sqrt(3)
+                X = np.arange(-limite, limite + 1, resolution)
+                Y = np.arange(-limite, limite + 1, resolution)
+                points_valides = []
 
-    for L1 in tqdm(range(5, 16)):
-        for L2 in range(5, 16):
-            for cote_E in range(2, 11):
-                print(f"🔍 Test L1={L1}, L2={L2}, côté effecteur={cote_E}")
-                points_valides = calculer_aire_travail(L1, L2, cote_E)
-                aire = points_valides
+                for x in X:
+                    for y in Y:
+                        if est_position_valide(x, y, 0, L1, L2, Re, Rb):
+                            points_valides.append((x, y))
+
+                aire = len(points_valides) * resolution**2
+                resultats.append(((L1, L2, cote_E), aire))
+
                 if aire > max_aire:
                     max_aire = aire
                     meilleures_config = (L1, L2, cote_E)
-                    points_max = points_valides
-    
+                    points_max = points_valides.copy()
+
     if meilleures_config is not None:
         print(f"\n✔️ Meilleure configuration : L1={meilleures_config[0]}, L2={meilleures_config[1]}, côté effecteur={meilleures_config[2]} mm")
-        print(f"Aire atteignable maximale : {max_aire} points")
+        print(f"Aire atteignable maximale : {max_aire} mm² ({max_aire/100:.2f} cm²)")
 
         # Affichage graphique
         x_vals, y_vals = zip(*points_max)
@@ -142,6 +87,7 @@ def trouver_config_maximale():
         print("❌ Aucune configuration valide trouvée.")
 
     return resultats
+
 
 def tracer_courbes(resultats):
     df = pd.DataFrame(resultats, columns=["params", "aire"])
@@ -201,6 +147,24 @@ def tracer_heatmap(resultats, cote_E_fixe):
     plt.xlabel("L1 (mm)")
     plt.ylabel("L2 (mm)")
     plt.show()
+
+for L1 in tqdm(range(80, 121, 10)):
+    for L2 in range(80, 121, 10):
+        for cote_E in range(20, 41, 5):
+
+            Re = cote_E / np.sqrt(3)  # Rayon du triangle effecteur équilatéral
+            Rb = 50                   # Rayon du triangle base équilatéral
+            resolution = 5
+            limite = 150
+
+            # Scan de la grille
+            points = []
+            for x in np.arange(-limite, limite + 1, resolution):
+                for y in np.arange(-limite, limite + 1, resolution):
+                    if est_position_valide(x, y, 0, L1, L2, Re, Rb):
+                        points.append((x, y))
+
+            #print(f"✅ Nombre de points atteignables : {len(points)}")
 
 resultats = trouver_config_maximale()
 
