@@ -49,8 +49,8 @@ def trouver_config_maximale():
     points_singuliers_max = []
 
 
-    L1 = 120
-    L2 = 120
+    L1 = 100
+    L2 = 100
     for cote_E in range(90, 160, 10):  # côté effecteur
         Re = cote_E / np.sqrt(3)
         X = np.arange(-limite, limite + 1, resolution)
