@@ -9,7 +9,7 @@ def main():
     Rb=0.13;  # Rayon base
     Re=0.07; # Rayon effecteur
     dimensionPlateau= 0.50 #  carré en cm
-    pos_eff=[0.1, -0.02, 0.0]; # pose effecteur à choisir
+    pos_eff=[0., 0., 0.0]; # pose effecteur à choisir
     q0= np.array([  # solutions initiales des angles alpha beta des bras 1,2,3
                 [0], 
                 [pi/2], 
