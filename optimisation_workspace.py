@@ -39,7 +39,7 @@ def calculer_aire_travail(L1, L2, cote_E, Rb=120, resolution=5, limite=200):
     return aire * resolution**2  # aire en mm²
 
 def trouver_config_maximale():
-    Rb = 100  # Rayon de la base fixe
+    Rb = 300  # Rayon de la base fixe
     resolution = 5  # grille de 5 mm
     limite = 200  # espace de recherche
 
@@ -48,9 +48,9 @@ def trouver_config_maximale():
     resultats = []
     points_max = []
 
-    for L1 in tqdm(range(80, 121, 10)):
-        for L2 in range(80, 121, 10):
-            for cote_E in range(20, 41, 5):
+    for L1 in tqdm(range(80, 151, 10)):
+        for L2 in range(80, 151, 10):
+            for cote_E in range(80, 200, 5):
                 Re = cote_E / np.sqrt(3)
                 X = np.arange(-limite, limite + 1, resolution)
                 Y = np.arange(-limite, limite + 1, resolution)
@@ -148,14 +148,14 @@ def tracer_heatmap(resultats, cote_E_fixe):
     plt.ylabel("L2 (mm)")
     plt.show()
 
-for L1 in tqdm(range(80, 121, 10)):
-    for L2 in range(80, 121, 10):
-        for cote_E in range(20, 41, 5):
+for L1 in tqdm(range(80, 151, 10)):
+    for L2 in range(80, 151, 10):
+        for cote_E in range(80, 200, 5):
 
             Re = cote_E / np.sqrt(3)  # Rayon du triangle effecteur équilatéral
-            Rb = 50                   # Rayon du triangle base équilatéral
+            Rb = 300                   # Rayon du triangle base équilatéral
             resolution = 5
-            limite = 150
+            limite = 200
 
             # Scan de la grille
             points = []
