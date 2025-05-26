@@ -391,20 +391,17 @@ class Robot():
         B = np.diag(e)  # matrice diagonale avec e1, e2, e3 sur la diagonale
         det_A = np.linalg.det(A)
         det_B = np.linalg.det(B)
-        print(det_A)
-        print(det_B)
+     
         tolerance = 0.01
         if -tolerance < det_A < 0 + tolerance and self.est_modulo_pi(gamma) :
             print(" 1ere Singularite parallele (det(A) = 0 et gamma = Cte(pi)) ")
-            print("True")
             return True
 
         elif -tolerance < det_A < 0 + tolerance:
             print(" 2eme Singularite parallele (det(A) = 0) ")
-            print("True")
             return True
-        elif -0.001 < det_B < 0 + 0.001 :
-            # print(" Singularite série (det(B)) = 0) "
+        elif -0.0001 < det_B < 0 + 0.0001 :
+            # on utilise directement l'angle beta pour vérifier cette sigularité
             pass
         
         return False
@@ -549,18 +546,37 @@ class Robot():
                     else:
                         print("position inattéignable")
 
-
             elif self.mode == "circle":
                 x_temp, y_temp = 0.1 * np.cos(t),0.1 * np.sin(t)
                 pos_eff_future = np.array([x_temp, y_temp, self.theta])
                 q_future = self.MGI_analytique(pos_eff_future)
-                if  not self.check_extesnsion(q_future):
-                    x = 0.1 * np.cos(t)
-                    y = 0.1 * np.sin(t)
-                    t += 0.01
+
+                if not self.check_extesnsion(q_future):
+                    print("ok check")
+                    P_future = self.calculPos(q_future)
+                    singularite = self.calcul_matrices_AB(P_future)
+                    print("Singularité ?", singularite)
+
+                    if not singularite :
+                        # Pas de singularité -> on avance
+                        x = x_temp
+                        y = y_temp
+                        t += 0.01
+                        if self.theta > 0: # pour remttre l'effecteur droit, pour etre dans la meilleur position
+                            theta_temp = self.theta - 0.01
+                            if not self.check_extesnsion(q_test):
+                                self.theta = theta_temp
+                                print("θ ajusté pour éviter la singularité :", self.theta)
+                            else:
+                                print("Position inatteignable, même avec rotation.")
+
+
+                    else:
+                        # Singularité détectée, ajuste theta vers la gauche
+                        compteur+=1
+                        theta_temp = self.theta + 0.01
 
             elif self.mode == "trefoil":
-                compteur=0
                 K = 0.02  # gain
                 r = K * (1 + np.cos(4 * t) + 2 * (np.sin(4 * t))**2)
                 x_temp, y_temp = r * np.cos(t), r * np.sin(t)
