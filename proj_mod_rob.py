@@ -37,8 +37,8 @@ class Robot():
         # Variables Pygame
         self.name=name
         pygame.init()
-        self.width=700
-        self.height=700
+        self.width=900
+        self.height=900
         self.window = pygame.display.set_mode((self.width,self.height))
         self.window.fill((255,255,255))
         pygame.display.set_caption(f"Simulation {self.name} robot")

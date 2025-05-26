@@ -7,8 +7,8 @@ def main():
     
     L1=0.10;  # long segment 1
     L2=0.10;  # long segment 2
-    Rb=0.1322594;  # Rayon base
-    Re=0.07; # Rayon effecteur
+    Rb=0.13;  # Rayon base
+    Re=0.017; # Rayon effecteur
     dimensionPlateau= 0.50 #  carré en cm
     pos_eff=[0.1, -0.02, 0.0]; # pose effecteur à choisir
     q0= np.array([  # solutions initiales des angles alpha beta des bras 1,2,3
