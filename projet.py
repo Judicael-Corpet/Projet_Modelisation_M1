@@ -433,6 +433,9 @@ class Robot():
         font = pygame.font.SysFont("Arial", 28)
         texte_angle = font.render(f"θ : {self.theta:.1f}°", True, TEXT_COLOR)
         self.window.blit(texte_angle, (10, 10))
+        font2 = pygame.font.SysFont("Arial", 20)
+        texte_touches = font2.render(f"press O for a circle, P for a trefoil, M for manual control", True, TEXT_COLOR)
+        self.window.blit(texte_touches, (10, 650))
 
         # Liste des bras pour boucle
         bras = [
