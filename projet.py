@@ -292,6 +292,51 @@ class Robot():
             result=True
         return result
     # Calcul des matrices A et B pour vérifier les singularités
+    def calculer_gamma(self,A,B):
+        vec_AiBi = B - A
+        # Angle entre AiBi et l’axe x (global), puis exprimé dans le repère de l’effecteur
+        gamma_i = np.arctan2(vec_AiBi[1], vec_AiBi[0]) - self.theta
+
+    
+        return gamma_i
+
+    def calculer_d(self,A, B):
+        """
+        Calcule le bras de levier signé (d_i) entre le centre de la plateforme C
+        et la droite A->B, en gardant le signe du moment.
+        """
+        E= [self.pos_eff[0], self.pos_eff[1]] # pos centre effecteur
+        E=np.array(E)
+        AB = B - A
+        AE = E - A
+        numerateur = AB[0]*AE[1] - AB[1]*AE[0]  # produit vectoriel 2D signé
+        denominateur = np.linalg.norm(AB)
+        d = numerateur / denominateur
+        return d  # signe conservé
+
+    def calculer_e(self,A, B, O):
+        AB = B - A
+        AO = O - A
+        # Produit vectoriel |AB x AO|| 
+        numerateur = np.abs(AB[0]*AO[1] - AB[1]*AO[0])
+        denominateur = np.linalg.norm(AB)
+        e = numerateur / denominateur
+        return e
+
+    def est_modulo_pi(self,gammas, tol=1e-6):
+        """
+        Vérifie si tous les angles de la liste `gammas` sont égaux modulo π (±π).
+        
+        Paramètres :
+        - gammas : liste ou array d'angles en radians
+        - tol : tolérance pour comparaison numérique
+        
+        Retourne : True si tous les γi ≡ γj mod π
+        """
+        gamma0 = gammas[0] % np.pi
+        return all(np.abs((g % np.pi) - gamma0) < tol or
+                np.abs((g % np.pi) - gamma0 - np.pi) < tol for g in gammas[1:])
+
     def calcul_matrices_AB(self,P):
         """
         Calcule les matrices A et B pour un robot parallèle 3RRR.
@@ -306,52 +351,6 @@ class Robot():
         - B : matrice 3x3
     
         """
-
-        def calculer_gamma(self,A,B):
-            vec_AiBi = B - A
-            # Angle entre AiBi et l’axe x (global), puis exprimé dans le repère de l’effecteur
-            gamma_i = np.arctan2(vec_AiBi[1], vec_AiBi[0]) - self.theta
-
-        
-            return gamma_i
-
-        def calculer_d(self,A, B):
-            """
-            Calcule le bras de levier signé (d_i) entre le centre de la plateforme C
-            et la droite A->B, en gardant le signe du moment.
-            """
-            E= [self.pos_eff[0], self.pos_eff[1]] # pos centre effecteur
-            E=np.array(E)
-            AB = B - A
-            AE = E - A
-            numerateur = AB[0]*AE[1] - AB[1]*AE[0]  # produit vectoriel 2D signé
-            denominateur = np.linalg.norm(AB)
-            d = numerateur / denominateur
-            return d  # signe conservé
-
-        def calculer_e(self,A, B, O):
-            AB = B - A
-            AO = O - A
-            # Produit vectoriel |AB x AO|| 
-            numerateur = np.abs(AB[0]*AO[1] - AB[1]*AO[0])
-            denominateur = np.linalg.norm(AB)
-            e = numerateur / denominateur
-            return e
-  
-        def est_modulo_pi(self,gammas, tol=1e-6):
-            """
-            Vérifie si tous les angles de la liste `gammas` sont égaux modulo π (±π).
-            
-            Paramètres :
-            - gammas : liste ou array d'angles en radians
-            - tol : tolérance pour comparaison numérique
-            
-            Retourne : True si tous les γi ≡ γj mod π
-            """
-            gamma0 = gammas[0] % np.pi
-            return all(np.abs((g % np.pi) - gamma0) < tol or
-                    np.abs((g % np.pi) - gamma0 - np.pi) < tol for g in gammas[1:])
-
         
         P10, P11, P12, P20, P21, P22, P30, P31, P32 = P
 
