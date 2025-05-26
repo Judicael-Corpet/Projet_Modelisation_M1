@@ -422,51 +422,58 @@ class Robot():
         y = int(self.height / 2 - pos[1] * self.scale)
         return (x, y)
 
-    def draw_robot(self,P):
-        """Dessine le robot sur la fenêtre pygame"""
+    def draw_robot(self, P):
+        """Dessine le robot sur la fenêtre pygame avec une apparence professionnelle"""
         P10, P11, P12, P20, P21, P22, P30, P31, P32 = P
 
-        self.window.fill((232, 220, 202))  # fond
-        font = pygame.font.SysFont("Arial", 30)
-        NOIR = (0, 0, 0)
-        texte_angle = font.render(f"Angle: {self.theta:.1f}°", True, NOIR)
-        self.window.blit(texte_angle, (10, 10))  # Affichage en haut à gauche
-        
-        # Dessiner les bras
-        pygame.draw.circle(self.window,(0,255,255),self.to_screen(P32),10,3)
-        pygame.draw.lines(self.window, (255, 0, 0), False, [
-            self.to_screen(P10[:2]),
-            self.to_screen(P11[:2]),
-            self.to_screen(P12[:2])
-        ], 4)
+        # Couleurs sérieuses / scientifiques
+        BACKGROUND = (240, 240, 245)
+        TEXT_COLOR = (30, 30, 30)
+        BASE_COLOR = (80, 80, 80)
+        ARM1_COLOR = (200, 70, 70)
+        ARM2_COLOR = (70, 160, 90)
+        ARM3_COLOR = (70, 130, 180)
+        EFFECTOR_COLOR = (120, 90, 200)
+        TRAJECTORY_COLOR = (50, 50, 200)
+        JOINT_COLOR = (20, 20, 20)
 
-        pygame.draw.lines(self.window, (0, 255, 0), False, [
-            self.to_screen(P20[:2]),
-            self.to_screen(P21[:2]),
-            self.to_screen(P22[:2])
-        ], 4)
+        self.window.fill(BACKGROUND)
 
-        pygame.draw.lines(self.window, (0, 0, 255), False, [
-            self.to_screen(P30[:2]),
-            self.to_screen(P31[:2]),
-            self.to_screen(P32[:2])
-        ], 4)
+        # Affichage de l'angle
+        font = pygame.font.SysFont("Arial", 28)
+        texte_angle = font.render(f"θ : {self.theta:.1f}°", True, TEXT_COLOR)
+        self.window.blit(texte_angle, (10, 10))
 
-        # Dessiner l'effecteur (triangle)
-        pygame.draw.polygon(self.window, (150, 100, 255), [
+        # Liste des bras pour boucle
+        bras = [
+            (P10, P11, P12, ARM1_COLOR),
+            (P20, P21, P22, ARM2_COLOR),
+            (P30, P31, P32, ARM3_COLOR)
+        ]
+
+        for O, A, B, color in bras:
+            pygame.draw.line(self.window, color, self.to_screen(O[:2]), self.to_screen(A[:2]), 4)
+            pygame.draw.line(self.window, color, self.to_screen(A[:2]), self.to_screen(B[:2]), 4)
+
+            # Cercles aux joints
+            for joint in [O, A, B]:
+                pygame.draw.circle(self.window, JOINT_COLOR, self.to_screen(joint[:2]), 4)
+
+        # Triangle de l'effecteur
+        pygame.draw.polygon(self.window, EFFECTOR_COLOR, [
             self.to_screen(P12[:2]),
             self.to_screen(P22[:2]),
             self.to_screen(P32[:2])
-        ], 2)
+        ], width=2)
 
-        # Dessiner le barycentre (pointe)
+        # Barycentre de l'effecteur
         Gx = (P12[0] + P22[0] + P32[0]) / 3
         Gy = (P12[1] + P22[1] + P32[1]) / 3
         pygame.draw.circle(self.window, (255, 0, 0), self.to_screen((Gx, Gy)), 5)
 
-        # Tracer la trajectoire
+        # Tracé de la trajectoire
         if len(self.trajectory) > 1:
-            pygame.draw.lines(self.window, (0, 0, 255), False, self.trajectory, 2)
+            pygame.draw.lines(self.window, TRAJECTORY_COLOR, False, self.trajectory, 2)
 
         pygame.display.update()
 
